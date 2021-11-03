@@ -2,6 +2,7 @@
 	"name": "vscode-jsonnet",
 	"description": "Full code support (formatting, highlighting, navigation, etc) for Jsonnet",
 	"license": "Apache License Version 2.0",
+	"publisher": "julienduchesne",
 	"version": "0.0.1",
 	"repository": {
 		"type": "git",
