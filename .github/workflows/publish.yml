@@ -1,0 +1,30 @@
+on:
+  push:
+    tags:
+      - "*"
+
+name: Publish Extension
+jobs:
+  eslint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - run: npm install
+      - run: npm run compile
+      - run: npm run lint
+  publish:
+    needs: eslint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - run: npm install
+      - name: Publish to Visual Studio Marketplace
+        id: publishToMarketplace
+        uses: HaaLeo/publish-vscode-extension@v0
+        with:
+          pat: ${{ secrets.VS_MARKETPLACE_TOKEN }}
+          registryUrl: https://marketplace.visualstudio.com
+      - uses: ncipollo/release-action@v1
+        with:
+          artifacts: "${{ steps.publishToMarketplace.outputs.vsixPath }}"
+          token: ${{ secrets.GITHUB_TOKEN }}

@@ -5,13 +5,11 @@ on:
       - main
   pull_request: {}
 jobs:
-  build:
+  eslint:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
-      - name: Install modules
-        run: npm install
-      - name: Compile
-        run: npm run compile
-      - name: Lint
-        run: npm run lint
+      - run: npm install
+      - run: npm run compile
+      - run: npm run lint
+        
