@@ -1,0 +1,246 @@
+{
+    "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+    "name": "Jsonnet",
+    "patterns": [
+        {
+            "include": "#expression"
+        },
+        {
+            "include": "#keywords"
+        }
+    ],
+    "repository": {
+        "builtin-functions": {
+            "comment": "Functions from: https://jsonnet.org/ref/stdlib.html",
+            "patterns": [
+                {
+                    "comment": "External Variables",
+                    "match": "\\bstd[.]extVar\\b",
+                    "name": "support.function.jsonnet"
+                },
+                {
+                    "comment": "Types and Reflection",
+                    "match": "\\bstd[.](thisFile|type|length|get|objectHas|objectFields|objectValues|objectHasAll|objectFieldsAll|objectValuesAll|prune|mapWithKey)\\b",
+                    "name": "support.function.jsonnet"
+                },
+                {
+                    "comment": "Mathematical Utilities 1",
+                    "match": "\\bstd[.](abs|sign|max|min|pow|exp|log|exponent|mantissa|floor|ceil|sqrt|sin|cos|tan|asin|acos|atan)\\b",
+                    "name": "support.function.jsonnet"
+                },
+                {
+                    "comment": "Mathematical Utilities 2",
+                    "match": "\\bstd[.]clamp\\b",
+                    "name": "support.function.jsonnet"
+                },
+                {
+                    "comment": "Assertions and Debugging",
+                    "match": "\\bstd[.]assertEqual\\b",
+                    "name": "support.function.jsonnet"
+                },
+                {
+                    "comment": "String Manipulation",
+                    "match": "\\bstd[.](toString|codepoint|char|substr|findSubstr|startsWith|endsWith|stripChars|lstripChars|rstripChars|split|splitLimit|strReplace|asciiUpper|asciiLower|stringChars|format|escapeStringBash|escapeStringDollars|escapeStringJson|escapeStringPython)\\b",
+                    "name": "support.function.jsonnet"
+                },
+                {
+                    "comment": "Parsing 1",
+                    "match": "\\bstd[.]parse(Int|Octal|Hex|Json|Yaml)\\b",
+                    "name": "support.function.jsonnet"
+                },
+                {
+                    "comment": "Parsing 2",
+                    "match": "\\bstd[.](encodeUTF8|decodeUTF8)\\b",
+                    "name": "support.function.jsonnet"
+                },
+                {
+                    "comment": "Manifestation",
+                    "match": "\\bstd[.]manifest(Ini|Python|PythonVars|JsonEx|JsonMinified|YamlDoc|YamlStream|XmlJsonml|TomlEx)\\b",
+                    "name": "support.function.jsonnet"
+                },
+                {
+                    "comment": "Arrays",
+                    "match": "\\bstd[.](makeArray|member|count|find|map|mapWithIndex|filterMap|flatMap|filter|foldl|foldr|range|repeat|slice|join|lines|flattenArrays|reverse|sort|uniq)\\b",
+                    "name": "support.function.jsonnet"
+                },
+                {
+                    "comment": "Sets",
+                    "match": "\\bstd[.]set(Inter|Union|Diff|Member)?\\b",
+                    "name": "support.function.jsonnet"
+                },
+                {
+                    "comment": "Encoding",
+                    "match": "\\bstd[.](base64|base64DecodeBytes|base64Decode|md5)\\b",
+                    "name": "support.function.jsonnet"
+                },
+                {
+                    "comment": "JSON Merge Patch",
+                    "match": "\\bstd[.]mergePatch\\b",
+                    "name": "support.function.jsonnet"
+                },
+                {
+                    "comment": "Debugging",
+                    "match": "\\bstd[.]trace\\b",
+                    "name": "support.function.jsonnet"
+                }
+            ]
+        },
+        "comment": {
+            "patterns": [
+                {
+                    "begin": "/\\*",
+                    "end": "\\*/",
+                    "name": "comment.block.jsonnet"
+                },
+                {
+                    "match": "//.*$",
+                    "name": "comment.line.jsonnet"
+                },
+                {
+                    "match": "#.*$",
+                    "name": "comment.block.jsonnet"
+                }
+            ]
+        },
+        "double-quoted-strings": {
+            "begin": "\"",
+            "end": "\"",
+            "name": "string.quoted.double.jsonnet",
+            "patterns": [
+                {
+                    "match": "\\\\([\"\\\\/bfnrt]|(u[0-9a-fA-F]{4}))",
+                    "name": "constant.character.escape.jsonnet"
+                },
+                {
+                    "match": "\\\\[^\"\\\\/bfnrtu]",
+                    "name": "invalid.illegal.jsonnet"
+                }
+            ]
+        },
+        "expression": {
+            "patterns": [
+                {
+                    "include": "#literals"
+                },
+                {
+                    "include": "#comment"
+                },
+                {
+                    "include": "#single-quoted-strings"
+                },
+                {
+                    "include": "#double-quoted-strings"
+                },
+                {
+                    "include": "#triple-quoted-strings"
+                },
+                {
+                    "include": "#builtin-functions"
+                },
+                {
+                    "include": "#functions"
+                }
+            ]
+        },
+        "functions": {
+            "patterns": [
+                {
+                    "begin": "\\b([a-zA-Z_][a-z0-9A-Z_]*)\\s*\\(",
+                    "beginCaptures": {
+                        "1": {
+                            "name": "entity.name.function.jsonnet"
+                        }
+                    },
+                    "end": "\\)",
+                    "name": "meta.function",
+                    "patterns": [
+                        {
+                            "include": "#expression"
+                        }
+                    ]
+                }
+            ]
+        },
+        "keywords": {
+            "patterns": [
+                {
+                    "match": "[!:~\\+\\-&\\|\\^=<>\\*\\/%]",
+                    "name": "keyword.operator.jsonnet"
+                },
+                {
+                    "match": "\\$",
+                    "name": "keyword.other.jsonnet"
+                },
+                {
+                    "match": "\\b(self|super|import|importstr|local|tailstrict)\\b",
+                    "name": "keyword.other.jsonnet"
+                },
+                {
+                    "match": "\\b(if|then|else|for|in|error|assert)\\b",
+                    "name": "keyword.control.jsonnet"
+                },
+                {
+                    "match": "\\b(function)\\b",
+                    "name": "storage.type.jsonnet"
+                },
+                {
+                    "match": "[a-zA-Z_][a-z0-9A-Z_]*\\s*(:::|\\+:::)",
+                    "name": "variable.parameter.jsonnet"
+                },
+                {
+                    "match": "[a-zA-Z_][a-z0-9A-Z_]*\\s*(::|\\+::)",
+                    "name": "entity.name.type"
+                },
+                {
+                    "match": "[a-zA-Z_][a-z0-9A-Z_]*\\s*(:|\\+:)",
+                    "name": "variable.parameter.jsonnet"
+                }
+            ]
+        },
+        "literals": {
+            "patterns": [
+                {
+                    "match": "\\b(true|false|null)\\b",
+                    "name": "constant.language.jsonnet"
+                },
+                {
+                    "match": "\\b(\\d+([Ee][+-]?\\d+)?)\\b",
+                    "name": "constant.numeric.jsonnet"
+                },
+                {
+                    "match": "\\b\\d+[.]\\d*([Ee][+-]?\\d+)?\\b",
+                    "name": "constant.numeric.jsonnet"
+                },
+                {
+                    "match": "\\b[.]\\d+([Ee][+-]?\\d+)?\\b",
+                    "name": "constant.numeric.jsonnet"
+                }
+            ]
+        },
+        "single-quoted-strings": {
+            "begin": "'",
+            "end": "'",
+            "name": "string.quoted.double.jsonnet",
+            "patterns": [
+                {
+                    "match": "\\\\(['\\\\/bfnrt]|(u[0-9a-fA-F]{4}))",
+                    "name": "constant.character.escape.jsonnet"
+                },
+                {
+                    "match": "\\\\[^'\\\\/bfnrtu]",
+                    "name": "invalid.illegal.jsonnet"
+                }
+            ]
+        },
+        "triple-quoted-strings": {
+            "patterns": [
+                {
+                    "begin": "\\|\\|\\|",
+                    "end": "\\|\\|\\|",
+                    "name": "string.quoted.triple.jsonnet"
+                }
+            ]
+        }
+    },
+    "scopeName": "source.jsonnet"
+}

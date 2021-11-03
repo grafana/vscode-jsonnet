@@ -1,0 +1,81 @@
+{
+	"name": "vscode-jsonnet",
+	"description": "Full code support (formatting, highlighting, navigation, etc) for Jsonnet",
+	"license": "Apache License Version 2.0",
+	"version": "0.0.1",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/julienduchesne/vscode-jsonnet"
+	},
+	"engines": {
+		"vscode": "^1.61.0"
+	},
+	"categories": [],
+	"keywords": [],
+	"activationEvents": [
+		"onLanguage:jsonnet"
+	],
+	"main": "./out/extension",
+	"contributes": {
+		"languages": [
+			{
+				"id": "jsonnet",
+				"aliases": [
+					"Jsonnet",
+					"jsonnet"
+				],
+				"extensions": [
+					".jsonnet",
+					".libsonnet"
+				],
+				"configuration": "./language/configuration.jsonc"
+			}
+		],
+		"grammars": [
+			{
+				"language": "jsonnet",
+				"scopeName": "source.jsonnet",
+				"path": "./language/jsonnet.tmLanguage.json"
+			}
+		],
+		"configuration": {
+			"type": "object",
+			"title": "Jsonnet Language Server",
+			"properties": {
+				"jsonnet.languageServer": {
+					"pathToBinary": {
+						"scope": "resource",
+						"type": "string",
+						"description": "Path to language server binary"
+					},
+					"jpath": {
+						"scope": "resource",
+						"type": "array",
+						"items": {
+							"type": "string"
+						},
+						"default": [],
+						"description": "List of Jpaths to configure into the lsp"
+					}
+				}
+			}
+		}
+	},
+	"dependencies": {
+		"@types/vscode": "^1.61.0",
+		"vscode-languageclient": "^7.0.0"
+	},
+	"devDependencies": {
+		"@types/node": "^12.12.0",
+		"@typescript-eslint/eslint-plugin": "^4.23.0",
+		"@typescript-eslint/parser": "^4.23.0",
+		"eslint": "^7.26.0",
+		"typescript": "^4.4.3"
+	},
+	"scripts": {
+		"vscode:prepublish": "npm run compile",
+		"compile": "tsc -b",
+		"watch": "tsc -b -w",
+		"lint": "eslint ./src --ext .ts,.tsx"
+	}
+}
