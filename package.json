@@ -2,7 +2,7 @@
 	"name": "vscode-jsonnet",
 	"description": "Full code support (formatting, highlighting, navigation, etc) for Jsonnet",
 	"license": "Apache License Version 2.0",
-	"publisher": "julienduchesne",
+	"publisher": "JulienDuchesne",
 	"version": "0.0.1",
 	"repository": {
 		"type": "git",
@@ -43,21 +43,19 @@
 			"type": "object",
 			"title": "Jsonnet Language Server",
 			"properties": {
-				"jsonnet.languageServer": {
-					"pathToBinary": {
-						"scope": "resource",
-						"type": "string",
-						"description": "Path to language server binary"
+				"jsonnet.languageServer.pathToBinary": {
+					"scope": "resource",
+					"type": "string",
+					"description": "Path to language server binary"
+				},
+				"jsonnet.languageServer.jpath": {
+					"scope": "resource",
+					"type": "array",
+					"items": {
+						"type": "string"
 					},
-					"jpath": {
-						"scope": "resource",
-						"type": "array",
-						"items": {
-							"type": "string"
-						},
-						"default": [],
-						"description": "List of Jpaths to configure into the lsp"
-					}
+					"default": [],
+					"description": "List of Jpaths to configure into the lsp"
 				}
 			}
 		}
