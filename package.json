@@ -3,7 +3,7 @@
 	"description": "Full code support (formatting, highlighting, navigation, etc) for Jsonnet",
 	"license": "Apache License Version 2.0",
 	"publisher": "JulienDuchesne",
-	"version": "0.0.2",
+	"version": "0.0.3",
 	"repository": {
 		"type": "git",
 		"url": "https://github.com/julienduchesne/vscode-jsonnet"
@@ -18,6 +18,12 @@
 	],
 	"main": "./out/extension",
 	"contributes": {
+		"commands": [
+			{
+				"command": "jsonnet.restartLanguageServer",
+				"title": "Jsonnet: Restart Language Server"
+			}
+		],
 		"languages": [
 			{
 				"id": "jsonnet",
@@ -72,6 +78,12 @@
 				"jsonnet.languageServer.logLevel": {
 					"scope": "resource",
 					"type": "string",
+					"enum": [
+						"error",
+						"warn",
+						"info",
+						"debug"
+					],
 					"default": "info",
 					"description": "Log level for the language server"
 				}

@@ -1,5 +1,5 @@
 import * as path from 'path';
-import { workspace, ExtensionContext } from 'vscode';
+import { commands, workspace, ExtensionContext } from 'vscode';
 
 import {
 	Executable,
@@ -57,6 +57,14 @@ export function activate(context: ExtensionContext) {
 		clientOptions
 	);
 
+
+	context.subscriptions.push(
+		workspace.onDidChangeConfiguration(restartHandler),
+	);
+	context.subscriptions.push(
+		commands.registerCommand('jsonnet.restartLanguageServer', restartHandler),
+	);
+
 	// Start the client. This will also launch the server
 	client.start();
 }
@@ -66,4 +74,9 @@ export function deactivate(): Thenable<void> | undefined {
 		return undefined;
 	}
 	return client.stop();
+}
+
+async function restartHandler(): Promise<void> {
+	await client.stop();
+	client.start();
 }
