@@ -3,7 +3,7 @@
 	"description": "Full code support (formatting, highlighting, navigation, etc) for Jsonnet",
 	"license": "Apache License Version 2.0",
 	"publisher": "JulienDuchesne",
-	"version": "0.0.2",
+	"version": "0.1.0",
 	"repository": {
 		"type": "git",
 		"url": "https://github.com/julienduchesne/vscode-jsonnet"
@@ -49,6 +49,16 @@
 			"type": "object",
 			"title": "Jsonnet Language Server",
 			"properties": {
+				"jsonnet.languageServer.releaseRepository": {
+					"type": "string",
+					"default": "julienduchesne/jsonnet-language-server",
+					"description": "Github repository to download the language server from"
+				},
+				"jsonnet.languageServer.enableAutoUpdate": {
+					"scope": "resource",
+					"type": "boolean",
+					"default": true
+				},
 				"jsonnet.languageServer.pathToBinary": {
 					"scope": "resource",
 					"type": "string",

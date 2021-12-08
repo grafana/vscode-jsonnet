@@ -1,5 +1,5 @@
 import * as path from 'path';
-import { commands, workspace, ExtensionContext } from 'vscode';
+import { commands, window, workspace, ExtensionContext } from 'vscode';
 
 import {
 	Executable,
@@ -7,17 +7,12 @@ import {
 	LanguageClientOptions,
 	ServerOptions,
 } from 'vscode-languageclient/node';
+import { install } from './install';
 
 let client: LanguageClient;
 
-export function activate(context: ExtensionContext) {
-	const binPath: string = workspace.getConfiguration('jsonnet').get('languageServer.pathToBinary');
-
-	if (binPath === null) {
-		// TODO: vscode-client should auto-install the latest released version when pathToBinary is not set
-		// Then ask the user to update when a new release goes out
-		throw new Error("Set languageServer.pathToBinary");
-	}
+export async function activate(context: ExtensionContext): Promise<void> {
+	const channel = window.createOutputChannel('Jsonnet');
 
 	let jpath: string[] = workspace.getConfiguration('jsonnet').get('languageServer.jpath');
 	jpath = jpath.map(p => path.isAbsolute(p) ? p : path.join(workspace.workspaceFolders[0].uri.fsPath, p));
@@ -30,6 +25,7 @@ export function activate(context: ExtensionContext) {
 		args.push('--lint');
 	}
 
+	const binPath = await install(context, channel);
 	const executable: Executable = {
 		command: binPath,
 		args: args,
@@ -37,6 +33,7 @@ export function activate(context: ExtensionContext) {
 			env: { "JSONNET_PATH": jpath.join(path.delimiter) }
 		},
 	};
+	channel.appendLine(`Jsonnet Language Server will start: '${executable.command} ${executable.args.join(' ')}'`);
 
 	const serverOptions: ServerOptions = {
 		run: executable,
@@ -56,7 +53,6 @@ export function activate(context: ExtensionContext) {
 		serverOptions,
 		clientOptions
 	);
-
 
 	context.subscriptions.push(
 		workspace.onDidChangeConfiguration(restartHandler),
