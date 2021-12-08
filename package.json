@@ -3,7 +3,7 @@
 	"description": "Full code support (formatting, highlighting, navigation, etc) for Jsonnet",
 	"license": "Apache License Version 2.0",
 	"publisher": "JulienDuchesne",
-	"version": "0.0.1",
+	"version": "0.0.2",
 	"repository": {
 		"type": "git",
 		"url": "https://github.com/julienduchesne/vscode-jsonnet"
@@ -56,6 +56,24 @@
 					},
 					"default": [],
 					"description": "List of Jpaths to configure into the lsp"
+				},
+				"jsonnet.languageServer.tankaMode": {
+					"scope": "resource",
+					"type": "boolean",
+					"default": true,
+					"description": "Enable tanka mode. This will use Tanka's code to create a Jsonnet VM. This sets the jpath automatically and allows the resolution of tanka native functions"
+				},
+				"jsonnet.languageServer.lint": {
+					"scope": "resource",
+					"type": "boolean",
+					"default": false,
+					"description": "If enabled, the LSP will publish linting diagnostics. This may slow down processing of jsonnet evaluation errors (also published as diagnostics)"
+				},
+				"jsonnet.languageServer.logLevel": {
+					"scope": "resource",
+					"type": "string",
+					"default": "info",
+					"description": "Log level for the language server"
 				}
 			}
 		}

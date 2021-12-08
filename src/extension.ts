@@ -22,9 +22,17 @@ export function activate(context: ExtensionContext) {
 	let jpath: string[] = workspace.getConfiguration('jsonnet').get('languageServer.jpath');
 	jpath = jpath.map(p => path.isAbsolute(p) ? p : path.join(workspace.workspaceFolders[0].uri.fsPath, p));
 
+	let args: string[] = ["--log-level", workspace.getConfiguration('jsonnet').get('languageServer.logLevel')];
+	if (workspace.getConfiguration('jsonnet').get('languageServer.tankaMode') === true) {
+		args.push('--tanka');
+	}
+	if (workspace.getConfiguration('jsonnet').get('languageServer.lint') === true) {
+		args.push('--lint');
+	}
+
 	const executable: Executable = {
 		command: binPath,
-		args: [],
+		args: args,
 		options: {
 			env: { "JSONNET_PATH": jpath.join(path.delimiter) }
 		},
@@ -37,12 +45,8 @@ export function activate(context: ExtensionContext) {
 
 	// Options to control the language client
 	const clientOptions: LanguageClientOptions = {
-		// Register the server for plain text documents
-		documentSelector: [{ scheme: 'file', language: 'jsonnet' }],
-		synchronize: {
-			// Notify the server about file changes to '.clientrc files contained in the workspace
-			fileEvents: workspace.createFileSystemWatcher('**/.clientrc')
-		}
+		// Register the server for jsonnet files
+		documentSelector: [{ scheme: 'file', language: 'jsonnet' }]
 	};
 
 	// Create the language client and start the client.
