@@ -22,7 +22,7 @@ export function activate(context: ExtensionContext) {
 	let jpath: string[] = workspace.getConfiguration('jsonnet').get('languageServer.jpath');
 	jpath = jpath.map(p => path.isAbsolute(p) ? p : path.join(workspace.workspaceFolders[0].uri.fsPath, p));
 
-	let args: string[] = ["--log-level", workspace.getConfiguration('jsonnet').get('languageServer.logLevel')];
+	const args: string[] = ["--log-level", workspace.getConfiguration('jsonnet').get('languageServer.logLevel')];
 	if (workspace.getConfiguration('jsonnet').get('languageServer.tankaMode') === true) {
 		args.push('--tanka');
 	}
