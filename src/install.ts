@@ -1,7 +1,7 @@
 import { ExtensionContext, OutputChannel, window, workspace } from "vscode";
 import * as https from 'https';
 import * as fs from 'fs';
-import { exec, execFile, execFileSync } from 'child_process';
+import { execFileSync } from 'child_process';
 import * as path from 'path';
 
 export async function install(context: ExtensionContext, channel: OutputChannel): Promise<string> {
@@ -39,6 +39,8 @@ export async function install(context: ExtensionContext, channel: OutputChannel)
         }
         return binPath;
     }
+
+
 
 
     // Check for the latest release in Github
@@ -127,8 +129,7 @@ export async function install(context: ExtensionContext, channel: OutputChannel)
         channel.appendLine(`Downloading ${url}`);
 
         try {
-            const file = fs.createWriteStream(binPath);
-            await httpsDownload(url, file);
+            await download(url, binPath);
             fs.chmodSync(binPath, 0o777);
         } catch (e) {
             const msg = `Failed to download ${url} to ${binPath}`;
@@ -147,16 +148,24 @@ export async function install(context: ExtensionContext, channel: OutputChannel)
     return binPath;
 }
 
-function httpsDownload(url: string, dest: fs.WriteStream): Promise<void> {
+function download(uri, filename) {
     return new Promise((resolve, reject) => {
-        https.get(url, function (response) {
-            if (response.statusCode === 301 || response.statusCode === 302) { // follow redirects
-                url = response.headers.location;
-                return resolve(httpsDownload(url, dest));
+        const onError = function (e) {
+            fs.unlinkSync(filename);
+            reject(e);
+        };
+        https.get(uri, function (response) {
+            if (response.statusCode >= 200 && response.statusCode < 300) {
+                const fileStream = fs.createWriteStream(filename);
+                fileStream.on('error', onError);
+                fileStream.on('close', resolve);
+                response.pipe(fileStream);
+            } else if (response.headers.location) {
+                resolve(download(response.headers.location, filename));
+            } else {
+                reject(new Error(response.statusCode + ' ' + response.statusMessage));
             }
-            response.pipe(dest).on('finish', resolve).on('error', reject);
-        })
-            .on('error', reject);
+        }).on('error', onError);
     });
 }
 
