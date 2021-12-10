@@ -1,5 +1,5 @@
 import * as path from 'path';
-import { commands, window, workspace, ExtensionContext, Uri } from 'vscode';
+import { commands, window, workspace, ExtensionContext, Uri, OutputChannel } from 'vscode';
 import * as fs from 'fs';
 import * as os from 'os';
 
@@ -13,51 +13,15 @@ import {
 } from 'vscode-languageclient/node';
 import { install } from './install';
 
+let extensionContext: ExtensionContext;
 let client: LanguageClient;
+let channel: OutputChannel
 
 export async function activate(context: ExtensionContext): Promise<void> {
-	const channel = window.createOutputChannel('Jsonnet');
+	channel = window.createOutputChannel('Jsonnet');
+	extensionContext = context;
 
-	let jpath: string[] = workspace.getConfiguration('jsonnet').get('languageServer.jpath');
-	jpath = jpath.map(p => path.isAbsolute(p) ? p : path.join(workspace.workspaceFolders[0].uri.fsPath, p));
-
-	const args: string[] = ["--log-level", workspace.getConfiguration('jsonnet').get('languageServer.logLevel')];
-	if (workspace.getConfiguration('jsonnet').get('languageServer.tankaMode') === true) {
-		args.push('--tanka');
-	}
-	if (workspace.getConfiguration('jsonnet').get('languageServer.lint') === true) {
-		args.push('--lint');
-	}
-
-	const binPath = await install(context, channel);
-	const executable: Executable = {
-		command: binPath,
-		args: args,
-		options: {
-			env: { "JSONNET_PATH": jpath.join(path.delimiter) }
-		},
-	};
-	channel.appendLine(`Jsonnet Language Server will start: '${executable.command} ${executable.args.join(' ')}'`);
-
-	const serverOptions: ServerOptions = {
-		run: executable,
-		debug: executable,
-
-	};
-
-	// Options to control the language client
-	const clientOptions: LanguageClientOptions = {
-		// Register the server for jsonnet files
-		documentSelector: [{ scheme: 'file', language: 'jsonnet' }]
-	};
-
-	// Create the language client and start the client.
-	client = new LanguageClient(
-		'jsonnetLanguageServer',
-		'Jsonnet Language Server',
-		serverOptions,
-		clientOptions
-	);
+	await startClient();
 
 	context.subscriptions.push(
 		workspace.onDidChangeConfiguration(restartHandler),
@@ -95,8 +59,7 @@ export async function activate(context: ExtensionContext): Promise<void> {
 		})
 	);
 
-	// Start the client. This will also launch the server
-	client.start();
+
 }
 
 function evalAndDisplay(context: ExtensionContext, params: ExecuteCommandParams): void {
@@ -120,7 +83,54 @@ export function deactivate(): Thenable<void> | undefined {
 	return client.stop();
 }
 
+async function startClient(): Promise<void> {
+	let jpath: string[] = workspace.getConfiguration('jsonnet').get('languageServer.jpath');
+	jpath = jpath.map(p => path.isAbsolute(p) ? p : path.join(workspace.workspaceFolders[0].uri.fsPath, p));
+
+	const args: string[] = ["--log-level", workspace.getConfiguration('jsonnet').get('languageServer.logLevel')];
+	if (workspace.getConfiguration('jsonnet').get('languageServer.tankaMode') === true) {
+		args.push('--tanka');
+	}
+	if (workspace.getConfiguration('jsonnet').get('languageServer.lint') === true) {
+		args.push('--lint');
+	}
+
+	const binPath = await install(extensionContext, channel);
+	const executable: Executable = {
+		command: binPath,
+		args: args,
+		options: {
+			env: { "JSONNET_PATH": jpath.join(path.delimiter) }
+		},
+	};
+	channel.appendLine(`Jsonnet Language Server will start: '${executable.command} ${executable.args.join(' ')}'`);
+
+	const serverOptions: ServerOptions = {
+		run: executable,
+		debug: executable,
+
+	};
+
+	// Options to control the language client
+	const clientOptions: LanguageClientOptions = {
+		// Register the server for jsonnet files
+		documentSelector: [{ scheme: 'file', language: 'jsonnet' }]
+	};
+
+	// Create the language client and start the client.
+	client = new LanguageClient(
+		'jsonnetLanguageServer',
+		'Jsonnet Language Server',
+		serverOptions,
+		clientOptions
+	);
+
+	// Start the client. This will also launch the server
+	client.start();
+}
+
 async function restartHandler(): Promise<void> {
 	await client.stop();
-	client.start();
+	client.outputChannel.dispose();
+	await startClient();
 }
