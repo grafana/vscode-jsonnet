@@ -2,7 +2,7 @@
 
 Full code support (formatting, highlighting, navigation, etc) for Jsonnet
 
-Uses <https://github.com/julienduchesne/jsonnet-language-server> as a language server. See that project's readme for information about its features
+Uses <https://github.com/grafana/jsonnet-language-server> as a language server. See that project's readme for information about its features
 
 ## Additional Features (over the language server)
 

@@ -15,7 +15,7 @@ import { install } from './install';
 
 let extensionContext: ExtensionContext;
 let client: LanguageClient;
-let channel: OutputChannel
+let channel: OutputChannel;
 
 export async function activate(context: ExtensionContext): Promise<void> {
 	channel = window.createOutputChannel('Jsonnet');
