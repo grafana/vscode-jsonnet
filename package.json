@@ -1,9 +1,11 @@
 {
 	"name": "vscode-jsonnet",
+	"icon": "icon.png",
+	"displayName": "Jsonnet Language Server",
 	"description": "Full code support (formatting, highlighting, navigation, etc) for Jsonnet",
 	"license": "Apache License Version 2.0",
-	"publisher": "JulienDuchesne",
-	"version": "0.2.1",
+	"publisher": "Grafana",
+	"version": "0.2.2",
 	"repository": {
 		"type": "git",
 		"url": "https://github.com/grafana/vscode-jsonnet"
