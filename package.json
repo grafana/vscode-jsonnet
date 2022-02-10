@@ -13,8 +13,17 @@
 	"engines": {
 		"vscode": "^1.61.0"
 	},
-	"categories": [],
-	"keywords": [],
+	"categories": [
+		"Programming Languages",
+		"Linters",
+		"Formatters"
+	],
+	"keywords": [
+		"jsonnet",
+		"grafana",
+		"lsp",
+		"language"
+	],
 	"activationEvents": [
 		"onLanguage:jsonnet"
 	],
