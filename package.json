@@ -5,7 +5,7 @@
 	"description": "Full code support (formatting, highlighting, navigation, etc) for Jsonnet",
 	"license": "Apache License Version 2.0",
 	"publisher": "Grafana",
-	"version": "0.2.2",
+	"version": "0.2.3",
 	"repository": {
 		"type": "git",
 		"url": "https://github.com/grafana/vscode-jsonnet"
@@ -50,8 +50,18 @@
 				"enablement": "resourceLangId == jsonnet"
 			},
 			{
+				"command": "jsonnet.evalFileYaml",
+				"title": "Jsonnet: Evaluate File (YAML)",
+				"enablement": "resourceLangId == jsonnet"
+			},
+			{
 				"command": "jsonnet.evalExpression",
 				"title": "Jsonnet: Evaluate Expression",
+				"enablement": "resourceLangId == jsonnet"
+			},
+			{
+				"command": "jsonnet.evalExpressionYaml",
+				"title": "Jsonnet: Evaluate Expression (YAML)",
 				"enablement": "resourceLangId == jsonnet"
 			},
 			{
@@ -137,7 +147,8 @@
 	},
 	"dependencies": {
 		"@types/vscode": "^1.61.0",
-		"vscode-languageclient": "^7.0.0"
+		"vscode-languageclient": "^7.0.0",
+		"yaml": "^1.10.2"
 	},
 	"devDependencies": {
 		"@types/node": "^12.12.0",
