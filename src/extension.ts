@@ -2,6 +2,7 @@ import * as path from 'path';
 import { commands, window, workspace, ExtensionContext, Uri, OutputChannel } from 'vscode';
 import * as fs from 'fs';
 import * as os from 'os';
+import { stringify as stringifyYaml } from 'yaml';
 
 import {
 	Executable,
@@ -33,42 +34,59 @@ export async function activate(context: ExtensionContext): Promise<void> {
 				command: `jsonnet.evalItem`,
 				arguments: [editor.document.uri.fsPath, editor.selection.active],
 			};
-			evalAndDisplay(context, params);
+			evalAndDisplay(params, false);
 		}),
-		commands.registerCommand('jsonnet.evalFile', async () => {
-			const editor = window.activeTextEditor;
-			const params: ExecuteCommandParams = {
-				command: `jsonnet.evalFile`,
-				arguments: [editor.document.uri.fsPath],
-			};
-			evalAndDisplay(context, params);
-		}),
-		commands.registerCommand('jsonnet.evalExpression', async () => {
-			const editor = window.activeTextEditor;
-			window.showInputBox({ prompt: 'Expression to evaluate' }).then(async (expr) => {
-				if (expr) {
-					const params: ExecuteCommandParams = {
-						command: `jsonnet.evalExpression`,
-						arguments: [editor.document.uri.fsPath, expr],
-					};
-					evalAndDisplay(context, params);
-				} else {
-					window.showErrorMessage('No expression provided');
-				}
-			});
-		})
+		commands.registerCommand('jsonnet.evalFile', evalFileFunc(false)),
+		commands.registerCommand('jsonnet.evalFileYaml', evalFileFunc(true)),
+		commands.registerCommand('jsonnet.evalExpression', evalExpressionFunc(false)),
+		commands.registerCommand('jsonnet.evalExpressionYaml', evalExpressionFunc(true))
 	);
-
-
 }
 
-function evalAndDisplay(context: ExtensionContext, params: ExecuteCommandParams): void {
+function evalFileFunc(yaml: boolean) {
+	return async () => {
+		const editor = window.activeTextEditor;
+		const params: ExecuteCommandParams = {
+			command: `jsonnet.evalFile`,
+			arguments: [editor.document.uri.fsPath],
+		};
+		evalAndDisplay(params, yaml);
+	};
+}
+
+function evalExpressionFunc(yaml: boolean) {
+	return async () => {
+		const editor = window.activeTextEditor;
+		window.showInputBox({ prompt: 'Expression to evaluate' }).then(async (expr) => {
+			if (expr) {
+				const params: ExecuteCommandParams = {
+					command: `jsonnet.evalExpression`,
+					arguments: [editor.document.uri.fsPath, expr],
+				};
+				evalAndDisplay(params, yaml);
+			} else {
+				window.showErrorMessage('No expression provided');
+			}
+		});
+	};
+}
+
+function evalAndDisplay(params: ExecuteCommandParams, yaml: boolean): void {
 	client.sendRequest(ExecuteCommandRequest.type, params)
 		.then(result => {
 			const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "jsonnet-eval"));
 			const tempFile = path.join(tempDir, "result.json");
-			const uri = Uri.file(tempFile);
+			let uri = Uri.file(tempFile);
 			fs.writeFileSync(tempFile, result);
+
+			if (yaml) {
+				const file = fs.readFileSync(tempFile, 'utf8');
+				const parsed = JSON.parse(file);
+				const yamlString = stringifyYaml(parsed);
+				const tempYamlFile = path.join(tempDir, "result.yaml");
+				uri = Uri.file(tempYamlFile);
+				fs.writeFileSync(tempYamlFile, yamlString);
+			}
 			window.showTextDocument(uri, { preview: true });
 		})
 		.catch(err => {
