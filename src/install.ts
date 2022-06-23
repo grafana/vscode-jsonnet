@@ -13,6 +13,9 @@ export async function install(context: ExtensionContext, channel: OutputChannel)
     if (!isCustomBinPath) {
         channel.appendLine(`Not using custom binary path. Using default path`);
         binPath = path.join(context.globalStorageUri.fsPath, 'bin', 'jsonnet-language-server');
+        if (process.platform.toString() === 'win32') {
+            binPath = `${binPath}.exe`;
+        }
         const binDir = path.dirname(binPath);
         try {
             fs.mkdirSync(binDir, { recursive: true });
