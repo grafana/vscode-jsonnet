@@ -26,5 +26,6 @@ jobs:
           registryUrl: https://marketplace.visualstudio.com
       - uses: ncipollo/release-action@v1
         with:
+          allowUpdates: true
           artifacts: "${{ steps.publishToMarketplace.outputs.vsixPath }}"
           token: ${{ secrets.GITHUB_TOKEN }}
