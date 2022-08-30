@@ -118,7 +118,7 @@ async function startClient(): Promise<void> {
 		command: binPath,
 		args: args,
 		options: {
-			env: { "JSONNET_PATH": jpath.join(path.delimiter) }
+			env: Object.assign(process.env, { "JSONNET_PATH": jpath.join(path.delimiter) }),
 		},
 	};
 	channel.appendLine(`Jsonnet Language Server will start: '${executable.command} ${executable.args.join(' ')}'`);
@@ -126,7 +126,6 @@ async function startClient(): Promise<void> {
 	const serverOptions: ServerOptions = {
 		run: executable,
 		debug: executable,
-
 	};
 
 	// Options to control the language client
