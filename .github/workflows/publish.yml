@@ -24,6 +24,10 @@ jobs:
         with:
           pat: ${{ secrets.VS_MARKETPLACE_TOKEN }}
           registryUrl: https://marketplace.visualstudio.com
+      - name: Publish to Open VSX
+        run: |
+          npm install -g npx
+          npx ovsx publish "${{ steps.publishToMarketplace.outputs.vsixPath }}" -p "${{ secrets.OPEN_VSX_TOKEN }}"
       - uses: ncipollo/release-action@v1
         with:
           allowUpdates: true
