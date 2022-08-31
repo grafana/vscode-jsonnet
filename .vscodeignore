@@ -1,0 +1,5 @@
+.github
+.gitignore
+.eslintignore
+README.md
+**/README.md

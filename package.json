@@ -109,6 +109,12 @@
 					"type": "string",
 					"description": "Path to language server binary"
 				},
+				"jsonnet.languageServer.extVars": {
+					"scope": "resource",
+					"type": "object",
+					"default": {},
+					"description": "External variables to pass to the language server"
+				},
 				"jsonnet.languageServer.jpath": {
 					"scope": "resource",
 					"type": "array",
@@ -124,11 +130,70 @@
 					"default": true,
 					"description": "Enable tanka mode. This will use Tanka's code to create a Jsonnet VM. This sets the jpath automatically and allows the resolution of tanka native functions"
 				},
+				"jsonnet.languageServer.eval": {
+					"scope": "resource",
+					"type": "boolean",
+					"default": true,
+					"description": "If enabled, the LSP will publish eval diagnostics. If you work with very large jsonnet projects, you may want to disable this"
+				},
 				"jsonnet.languageServer.lint": {
 					"scope": "resource",
 					"type": "boolean",
 					"default": false,
 					"description": "If enabled, the LSP will publish linting diagnostics. This may slow down processing of jsonnet evaluation errors (also published as diagnostics)"
+				},
+				"jsonnet.languageServer.formatting": {
+					"scope": "resource",
+					"type": "object",
+					"description": "Configure the formatting options for the language server. See https://github.com/google/go-jsonnet/blob/master/internal/formatter/jsonnetfmt.go#L55 for field descriptions.",
+					"properties": {
+						"Indent": {
+							"type": "number"
+						},
+						"MaxBlankLines": {
+							"type": "number"
+						},
+						"StringStyle": {
+							"type": "string",
+							"enum": [
+								"double",
+								"single",
+								"leave"
+							]
+						},
+						"CommentStyle": {
+							"type": "string",
+							"enum": [
+								"hash",
+								"slash",
+								"leave"
+							]
+						},
+						"PrettyFieldNames": {
+							"type": "boolean"
+						},
+						"PadArrays": {
+							"type": "boolean"
+						},
+						"PadObjects": {
+							"type": "boolean"
+						},
+						"SortImports": {
+							"type": "boolean"
+						},
+						"UseImplicitPlus": {
+							"type": "boolean"
+						},
+						"StripEverything": {
+							"type": "boolean"
+						},
+						"StripComments": {
+							"type": "boolean"
+						},
+						"StripAllButComments": {
+							"type": "boolean"
+						}
+					}
 				},
 				"jsonnet.languageServer.logLevel": {
 					"scope": "resource",
@@ -146,8 +211,8 @@
 		}
 	},
 	"dependencies": {
-		"@types/vscode": "^1.61.0",
-		"vscode-languageclient": "^7.0.0",
+		"@types/vscode": "^1.69.0",
+		"vscode-languageclient": "^8.0.0",
 		"yaml": "^1.10.2"
 	},
 	"devDependencies": {
