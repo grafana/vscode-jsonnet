@@ -38,7 +38,7 @@ export async function activate(context: ExtensionContext): Promise<void> {
 			const editor = window.activeTextEditor;
 			const params: ExecuteCommandParams = {
 				command: `jsonnet.evalItem`,
-				arguments: [editor.document.uri.fsPath, editor.selection.active],
+				arguments: [editor.document.uri.path, editor.selection.active],
 			};
 			evalAndDisplay(params, false);
 		}),
@@ -54,7 +54,7 @@ function evalFileFunc(yaml: boolean) {
 		const editor = window.activeTextEditor;
 		const params: ExecuteCommandParams = {
 			command: `jsonnet.evalFile`,
-			arguments: [editor.document.uri.fsPath],
+			arguments: [editor.document.uri.path],
 		};
 		evalAndDisplay(params, yaml);
 	};
@@ -67,7 +67,7 @@ function evalExpressionFunc(yaml: boolean) {
 			if (expr) {
 				const params: ExecuteCommandParams = {
 					command: `jsonnet.evalExpression`,
-					arguments: [editor.document.uri.fsPath, expr],
+					arguments: [editor.document.uri.path, expr],
 				};
 				evalAndDisplay(params, yaml);
 			} else {
