@@ -1,5 +1,5 @@
 import * as path from 'path';
-import { commands, window, workspace, ExtensionContext, Uri, OutputChannel } from 'vscode';
+import { commands, window, workspace, ExtensionContext, Uri, OutputChannel, TextEditor } from 'vscode';
 import * as fs from 'fs';
 import * as os from 'os';
 import { stringify as stringifyYaml } from 'yaml';
@@ -38,7 +38,7 @@ export async function activate(context: ExtensionContext): Promise<void> {
 			const editor = window.activeTextEditor;
 			const params: ExecuteCommandParams = {
 				command: `jsonnet.evalItem`,
-				arguments: [editor.document.uri.path, editor.selection.active],
+				arguments: [evalFilePath(editor), editor.selection.active],
 			};
 			evalAndDisplay(params, false);
 		}),
@@ -54,7 +54,7 @@ function evalFileFunc(yaml: boolean) {
 		const editor = window.activeTextEditor;
 		const params: ExecuteCommandParams = {
 			command: `jsonnet.evalFile`,
-			arguments: [editor.document.uri.path],
+			arguments: [evalFilePath(editor)],
 		};
 		evalAndDisplay(params, yaml);
 	};
@@ -67,7 +67,7 @@ function evalExpressionFunc(yaml: boolean) {
 			if (expr) {
 				const params: ExecuteCommandParams = {
 					command: `jsonnet.evalExpression`,
-					arguments: [editor.document.uri.path, expr],
+					arguments: [evalFilePath(editor), expr],
 				};
 				evalAndDisplay(params, yaml);
 			} else {
@@ -78,6 +78,7 @@ function evalExpressionFunc(yaml: boolean) {
 }
 
 function evalAndDisplay(params: ExecuteCommandParams, yaml: boolean): void {
+	channel.appendLine(`Sending eval request: ${JSON.stringify(params)}`);
 	client.sendRequest(ExecuteCommandRequest.type, params)
 		.then(result => {
 			const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "jsonnet-eval"));
@@ -98,6 +99,10 @@ function evalAndDisplay(params: ExecuteCommandParams, yaml: boolean): void {
 		.catch(err => {
 			window.showErrorMessage(err.message);
 		});
+}
+
+function evalFilePath(editor: TextEditor): string {
+	return editor.document.uri.fsPath.replace(/\\/g, '/');
 }
 
 export function deactivate(): Thenable<void> | undefined {
