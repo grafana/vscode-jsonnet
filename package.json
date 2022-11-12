@@ -115,6 +115,11 @@
 					"default": {},
 					"description": "External variables to pass to the language server"
 				},
+				"jsonnet.languageServer.extCode": {
+					"scope": "resource",
+					"type" : "object",
+					"description": "External Jsonnet Code to pass to the language server"
+				},
 				"jsonnet.languageServer.jpath": {
 					"scope": "resource",
 					"type": "array",

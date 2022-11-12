@@ -165,6 +165,7 @@ async function didChangeConfigHandler() {
 		settings: {
 			log_level: workspaceConfig.get('languageServer.logLevel'),
 			ext_vars: workspaceConfig.get("languageServer.extVars"),
+			ext_code: workspaceConfig.get("languageServer.extCode"),
 			jpath: jpath,
 			resolve_paths_with_tanka: workspaceConfig.get('languageServer.tankaMode'),
 			enable_lint_diagnostics: workspaceConfig.get('languageServer.lint'),
