@@ -132,7 +132,7 @@
                     "include": "#double-quoted-strings"
                 },
                 {
-                    "include": "#triple-quoted-strings"
+                    "include": "#block-text-verbatim"
                 },
                 {
                     "include": "#builtin-functions"
@@ -232,12 +232,18 @@
                 }
             ]
         },
-        "triple-quoted-strings": {
+        "block-text-verbatim": {
             "patterns": [
                 {
-                    "begin": "\\|\\|\\|",
+                    "begin": "(?:\\|\\|\\|)(?:\\s*$)",
                     "end": "\\|\\|\\|",
-                    "name": "string.quoted.triple.jsonnet"
+                    "patterns": [
+                        {
+                            "begin": "^([ \t]+)(?! |\t|\\|)",
+                            "end": "^(?!\\1|\\s*$)",
+                            "name": "string.unquoted.verbatim.jsonnet"
+                        }
+                    ]
                 }
             ]
         }
