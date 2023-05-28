@@ -236,12 +236,13 @@
             "patterns": [
                 {
                     "begin": "(?:\\|\\|\\|)(?:\\s*$)",
-                    "end": "\\|\\|\\|",
+                    "end": "^\\s*\\|\\|\\|",
+                    "name": "keyword.other.jsonnet",
                     "patterns": [
                         {
-                            "begin": "^([ \t]+)(?! |\t|\\|(?=\\|))",
+                            "begin": "^([ \t]+)(?! |\t)",
                             "end": "^(?!\\1|\\s*$)",
-                            "name": "string.unquoted.verbatim.jsonnet"
+                            "name": "string.unquoted.block.jsonnet"
                         }
                     ]
                 }
