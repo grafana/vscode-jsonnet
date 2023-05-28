@@ -239,7 +239,7 @@
                     "end": "\\|\\|\\|",
                     "patterns": [
                         {
-                            "begin": "^([ \t]+)(?! |\t|\\|)",
+                            "begin": "^([ \t]+)(?! |\t|\\|(?=\\|))",
                             "end": "^(?!\\1|\\s*$)",
                             "name": "string.unquoted.verbatim.jsonnet"
                         }
