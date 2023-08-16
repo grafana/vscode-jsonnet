@@ -32,6 +32,7 @@ export async function activate(context: ExtensionContext): Promise<void> {
 			await client.stop();
 			client.outputChannel.dispose();
 			await startClient();
+			await didChangeConfigHandler();
 		}),
 		commands.registerCommand('jsonnet.evalItem', async () => {
 			// Not enabled for now, because the language server doesn't support it.
@@ -113,9 +114,6 @@ export function deactivate(): Thenable<void> | undefined {
 }
 
 async function startClient(): Promise<void> {
-	let jpath: string[] = workspace.getConfiguration('jsonnet').get('languageServer.jpath');
-	jpath = jpath.map(p => path.isAbsolute(p) ? p : path.join(workspace.workspaceFolders[0].uri.fsPath, p));
-
 	const args: string[] = ["--log-level", workspace.getConfiguration('jsonnet').get('languageServer.logLevel')];
 	if (workspace.getConfiguration('jsonnet').get('languageServer.tankaMode') === true) {
 		args.push('--tanka');
