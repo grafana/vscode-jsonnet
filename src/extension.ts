@@ -1,5 +1,5 @@
 import * as path from 'path';
-import { commands, window, workspace, ExtensionContext, Uri, OutputChannel, TextEditor } from 'vscode';
+import { commands, window, workspace, ExtensionContext, Uri, OutputChannel, TextEditor, ViewColumn } from 'vscode';
 import * as fs from 'fs';
 import * as os from 'os';
 import { stringify as stringifyYaml } from 'yaml';
@@ -95,7 +95,10 @@ function evalAndDisplay(params: ExecuteCommandParams, yaml: boolean): void {
 				uri = Uri.file(tempYamlFile);
 				fs.writeFileSync(tempYamlFile, yamlString);
 			}
-			window.showTextDocument(uri, { preview: true });
+			window.showTextDocument(uri, {
+				preview: true,
+				viewColumn: ViewColumn.Beside
+			});
 		})
 		.catch(err => {
 			window.showErrorMessage(err.message);
