@@ -5,7 +5,7 @@ on:
 
 # These permissions are needed to assume roles from Github's OIDC.
 permissions:
-  contents: read
+  contents: write
   id-token: write
 
 name: Publish Extension
