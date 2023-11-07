@@ -148,8 +148,8 @@
 				"jsonnet.languageServer.eval": {
 					"scope": "resource",
 					"type": "boolean",
-					"default": true,
-					"description": "If enabled, the LSP will publish eval diagnostics. If you work with very large jsonnet projects, you may want to disable this"
+					"default": false,
+					"description": "If enabled, the LSP will publish eval diagnostics. May produce false positives as the evaluator may not have the full evaluation context. Also, if you work with very large jsonnet projects, you may want to disable this for performance reasons"
 				},
 				"jsonnet.languageServer.lint": {
 					"scope": "resource",
