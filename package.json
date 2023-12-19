@@ -226,16 +226,16 @@
 		}
 	},
 	"dependencies": {
-		"@types/vscode": "^1.69.0",
-		"vscode-languageclient": "^8.0.0",
-		"yaml": "^1.10.2"
+		"@types/vscode": "^1.85.0",
+		"vscode-languageclient": "^9.0.1",
+		"yaml": "^2.3.4"
 	},
 	"devDependencies": {
-		"@types/node": "^12.12.0",
-		"@typescript-eslint/eslint-plugin": "^4.23.0",
-		"@typescript-eslint/parser": "^4.23.0",
-		"eslint": "^7.26.0",
-		"typescript": "^4.4.3"
+		"@types/node": "^20.10.5",
+		"@typescript-eslint/eslint-plugin": "^6.15.0",
+		"@typescript-eslint/parser": "^6.15.0",
+		"eslint": "^8.56.0",
+		"typescript": "^5.3.3"
 	},
 	"scripts": {
 		"vscode:prepublish": "npm run compile",

@@ -172,7 +172,11 @@ function download(uri, filename) {
     });
 }
 
-function githubApiRequest(url: string, options: https.RequestOptions = {}, encoding = 'utf8'): Promise<string> {
+function githubApiRequest(
+    url: string,
+    options: https.RequestOptions = {},
+    encoding: BufferEncoding = 'utf8'
+    ): Promise<string> {
     if (options.headers === undefined) {
         options.headers = {};
     }
@@ -194,4 +198,3 @@ function githubApiRequest(url: string, options: https.RequestOptions = {}, encod
             .end();
     });
 }
-
