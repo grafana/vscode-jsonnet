@@ -65,6 +65,12 @@
 				"icon": "$(open-preview)"
 			},
 			{
+				"command": "jsonnet.evalFileString",
+				"title": "Jsonnet: Evaluate File (String)",
+				"enablement": "resourceLangId == jsonnet",
+				"icon": "$(open-preview)"
+			},
+			{
 				"command": "jsonnet.evalExpression",
 				"title": "Jsonnet: Evaluate Expression",
 				"enablement": "resourceLangId == jsonnet"
@@ -72,6 +78,11 @@
 			{
 				"command": "jsonnet.evalExpressionYaml",
 				"title": "Jsonnet: Evaluate Expression (YAML)",
+				"enablement": "resourceLangId == jsonnet"
+			},
+			{
+				"command": "jsonnet.evalExpressionString",
+				"title": "Jsonnet: Evaluate Expression (String)",
 				"enablement": "resourceLangId == jsonnet"
 			},
 			{
