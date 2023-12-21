@@ -14,6 +14,13 @@ import {
 	ServerOptions,
 } from 'vscode-languageclient/node';
 import { install } from './install';
+import { openStdin } from 'process';
+
+enum OutputMode {
+    json,
+    yaml,
+    string
+}
 
 let extensionContext: ExtensionContext;
 let client: LanguageClient;
@@ -41,36 +48,50 @@ export async function activate(context: ExtensionContext): Promise<void> {
 				command: `jsonnet.evalItem`,
 				arguments: [evalFilePath(editor), editor.selection.active],
 			};
-			evalAndDisplay(params, false);
+			evalAndDisplay(params, OutputMode.json);
 		}),
-		commands.registerCommand('jsonnet.evalFile', evalFileFunc(false)),
-		commands.registerCommand('jsonnet.evalFileYaml', evalFileFunc(true)),
-		commands.registerCommand('jsonnet.evalExpression', evalExpressionFunc(false)),
-		commands.registerCommand('jsonnet.evalExpressionYaml', evalExpressionFunc(true))
+		commands.registerCommand('jsonnet.evalFile', evalFileFunc(OutputMode.json)),
+		commands.registerCommand('jsonnet.evalFileYaml', evalFileFunc(OutputMode.yaml)),
+		commands.registerCommand('jsonnet.evalFileString', evalFileFunc(OutputMode.string)),
+		commands.registerCommand('jsonnet.evalExpression', evalExpressionFunc(OutputMode.json)),
+		commands.registerCommand('jsonnet.evalExpressionYaml', evalExpressionFunc(OutputMode.yaml)),
+		commands.registerCommand('jsonnet.evalExpressionString', evalExpressionFunc(OutputMode.string))
 	);
 }
 
-function evalFileFunc(yaml: boolean) {
+/**
+ * @returns The extension of the output file suggested by the header of the current file.
+ */
+function suggestOutputExtension(): string {
+    const editor = window.activeTextEditor;
+    const header = editor.document.lineAt(0).text;
+    const ext = /output: \S*[.](?<ext>\S*)/i.exec(header)?.groups?.ext;
+    return ext;
+}
+
+function evalFileFunc(mode: OutputMode) {
 	return async () => {
 		const editor = window.activeTextEditor;
+        const ext = suggestOutputExtension();
 		const params: ExecuteCommandParams = {
 			command: `jsonnet.evalFile`,
 			arguments: [evalFilePath(editor)],
 		};
-		evalAndDisplay(params, yaml);
+		evalAndDisplay(params, mode, ext);
 	};
 }
 
-function evalExpressionFunc(yaml: boolean) {
+function evalExpressionFunc(mode: OutputMode) {
 	return async () => {
 		const editor = window.activeTextEditor;
 		window.showInputBox({ prompt: 'Expression to evaluate' }).then(async (expr) => {
 			if (expr) {
+                const ext = suggestOutputExtension();
 				const params: ExecuteCommandParams = {
 					command: `jsonnet.evalExpression`,
 					arguments: [evalFilePath(editor), expr],
 				};
-				evalAndDisplay(params, yaml);
+				evalAndDisplay(params, mode, ext);
 			} else {
 				window.showErrorMessage('No expression provided');
 			}
@@ -78,7 +99,32 @@ function evalExpressionFunc(yaml: boolean) {
 	};
 }
 
-function evalAndDisplay(params: ExecuteCommandParams, yaml: boolean): void {
+function outputYaml(tempFile: string, ext?: string): Uri {
+    const file = fs.readFileSync(tempFile, 'utf8');
+    const parsed = JSON.parse(file);
+    const yamlString = stringifyYaml(parsed);
+    const tempYamlFile = path.join(os.tmpdir(), "result.${ext || 'yaml'}}");
+    fs.writeFileSync(tempYamlFile, yamlString);
+    return Uri.file(tempYamlFile);
+}
+
+function outputString(tempFile: string, ext?: string): Uri {
+    const file = fs.readFileSync(tempFile, 'utf8');
+    const parsed = JSON.parse(file);
+    const tempStringFile = path.join(os.tmpdir(), `result.${ext || 'txt'}`);
+    const flatten = (arr: any[]): string =>
+        arr.map((item) => (typeof item === 'string' ? item : flatten(item)))
+        .join('\n');
+    if (typeof parsed === 'string') {
+        fs.writeFileSync(tempStringFile, parsed);
+    } else if (parsed instanceof Array) {
+        fs.writeFileSync(tempStringFile, flatten(parsed));
+    } else {
+        fs.writeFileSync(file, `Not a string or array of strings: ${JSON.stringify(parsed)}`);
+    }
+    return Uri.file(tempStringFile);
+}
+function evalAndDisplay(params: ExecuteCommandParams, mode: OutputMode, ext: string = null): void {
 	channel.appendLine(`Sending eval request: ${JSON.stringify(params)}`);
 	client.sendRequest(ExecuteCommandRequest.type, params)
 		.then(result => {
@@ -86,15 +132,17 @@ function evalAndDisplay(params: ExecuteCommandParams, yaml: boolean): void {
 			const tempFile = path.join(tempDir, "result.json");
 			let uri = Uri.file(tempFile);
 			fs.writeFileSync(tempFile, result);
-
-			if (yaml) {
-				const file = fs.readFileSync(tempFile, 'utf8');
-				const parsed = JSON.parse(file);
-				const yamlString = stringifyYaml(parsed);
-				const tempYamlFile = path.join(tempDir, "result.yaml");
-				uri = Uri.file(tempYamlFile);
-				fs.writeFileSync(tempYamlFile, yamlString);
-			}
+            switch (mode) {
+                case OutputMode.json:
+                    // No conversion needed.
+                    break;
+                case OutputMode.yaml:
+                    uri = outputYaml(tempFile, ext);
+                    break;
+                case OutputMode.string:
+                    uri = outputString(tempFile, ext);
+                    break;
+            }
 			window.showTextDocument(uri, {
 				preview: true,
 				viewColumn: ViewColumn.Beside
