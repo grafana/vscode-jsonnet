@@ -66,8 +66,6 @@ function suggestOutputExtension(): string {
     const editor = window.activeTextEditor;
     const header = editor.document.lineAt(0).text;
     const ext = /output: \S*[.](?<ext>\S*)/i.exec(header)?.groups?.ext;
-    channel.appendLine(`Header: ${header}`);
-    channel.appendLine(`Suggested extension: ${ext}`);
     return ext;
 }
 
