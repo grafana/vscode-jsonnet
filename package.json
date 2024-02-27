@@ -2,7 +2,7 @@
 	"name": "vscode-jsonnet",
 	"icon": "icon.png",
 	"displayName": "Jsonnet Language Server",
-	"description": "Full code support (formatting, highlighting, navigation, etc) for Jsonnet",
+	"description": "Full code support (formatting, highlighting, navigation, debugging etc) for Jsonnet",
 	"license": "Apache License Version 2.0",
 	"publisher": "Grafana",
 	"version": "0.5.1",
@@ -16,13 +16,15 @@
 	"categories": [
 		"Programming Languages",
 		"Linters",
-		"Formatters"
+		"Formatters",
+		"Debuggers"
 	],
 	"keywords": [
 		"jsonnet",
 		"grafana",
 		"lsp",
-		"language"
+		"language",
+		"debugger"
 	],
 	"activationEvents": [
 		"onLanguage:jsonnet"
@@ -43,6 +45,13 @@
 					"alt": "jsonnet.evalFileYaml",
 					"group": "navigation",
 					"when": "resourceLangId == jsonnet"
+				}
+			],
+			"editor/title/run": [
+				{
+					"command": "jsonnet.debugEditorContents",
+					"when": "resourceLangId == jsonnet",
+					"group": "navigation@1"
 				}
 			]
 		},
@@ -77,6 +86,13 @@
 			{
 				"command": "jsonnet.restartLanguageServer",
 				"title": "Jsonnet: Restart Language Server"
+			},
+			{
+				"command": "jsonnet.debugEditorContents",
+				"title": "Jsonnet: Debug File",
+				"category": "Jsonnet",
+				"enablement": "!inDebugMode",
+				"icon": "$(debug-alt)"
 			}
 		],
 		"languages": [
@@ -98,6 +114,51 @@
 				"language": "jsonnet",
 				"scopeName": "source.jsonnet",
 				"path": "./language/jsonnet.tmLanguage.json"
+			}
+		],
+		"breakpoints": [
+			{
+				"language": "jsonnet"
+			}
+		],
+		"debuggers": [
+			{
+				"type": "jsonnet",
+				"languages": [
+					"jsonnet"
+				],
+				"label": "Jsonnet Debugger",
+				"configurationAttributes": {
+					"launch": {
+						"required": [
+							"program",
+							"jpaths"
+						],
+						"properties": {
+							"program": {
+								"type": "string",
+								"description": "jsonnet script to run"
+							},
+							"jpaths": {
+								"type": "string[]",
+								"description": "jsonnet search paths"
+							}
+						}
+					}
+				},
+				"initialConfigurations": [],
+				"configurationSnippets": [
+					{
+						"label": "Jsonnet: Debug current file",
+						"description": "A new configuration for debugging a Jsonnet file.",
+						"body": {
+							"type": "jsonnet",
+							"request": "launch",
+							"name": "Debug current JSONNET file",
+							"program": "^\"\\${file}\""
+						}
+					}
+				]
 			}
 		],
 		"configuration": {
@@ -221,6 +282,21 @@
 					],
 					"default": "info",
 					"description": "Log level for the language server"
+				},
+				"jsonnet.debugger.releaseRepository": {
+					"type": "string",
+					"default": "grafana/jsonnet-debugger",
+					"description": "Github repository to download the debugger server from"
+				},
+				"jsonnet.debugger.enableAutoUpdate": {
+					"scope": "resource",
+					"type": "boolean",
+					"default": true
+				},
+				"jsonnet.debugger.pathToBinary": {
+					"scope": "resource",
+					"type": "string",
+					"description": "Path to debugger"
 				}
 			}
 		}
