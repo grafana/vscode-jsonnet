@@ -5,7 +5,7 @@
 	"description": "Full code support (formatting, highlighting, navigation, debugging etc) for Jsonnet",
 	"license": "Apache License Version 2.0",
 	"publisher": "Grafana",
-	"version": "0.5.1",
+	"version": "0.6.0-test",
 	"repository": {
 		"type": "git",
 		"url": "https://github.com/grafana/vscode-jsonnet"
@@ -140,8 +140,11 @@
 								"description": "jsonnet script to run"
 							},
 							"jpaths": {
-								"type": "string[]",
-								"description": "jsonnet search paths"
+								"type": "array",
+								"description": "jsonnet search paths",
+								"items": {
+									"type": "string"
+								}
 							}
 						}
 					}
