@@ -4,15 +4,36 @@ import * as fs from 'fs';
 import { execFileSync } from 'child_process';
 import * as path from 'path';
 
-export async function install(context: ExtensionContext, channel: OutputChannel): Promise<string> {
-  let binPath: string = workspace.getConfiguration('jsonnet').get('languageServer.pathToBinary');
-  const releaseRepository: string = workspace.getConfiguration('jsonnet').get('languageServer.releaseRepository');
+export type Component = 'languageServer' | 'debugger';
 
-  // If the binPath is undefined, use a default path
+const ComponentDetails: Record<
+  Component,
+  {
+    binaryName: string;
+    displayName: string;
+  }
+> = {
+  languageServer: {
+    binaryName: 'jsonnet-language-server',
+    displayName: 'language server',
+  },
+  debugger: {
+    binaryName: 'jsonnet-debugger',
+    displayName: 'debugger',
+  },
+};
+
+export async function install(
+  context: ExtensionContext,
+  channel: OutputChannel,
+  component: Component
+): Promise<string | null> {
+  const { binaryName, displayName } = ComponentDetails[component];
+  let binPath: string = workspace.getConfiguration('jsonnet').get(`${component}.pathToBinary`);
   const isCustomBinPath = binPath !== undefined && binPath !== null && binPath !== '';
   if (!isCustomBinPath) {
-    channel.appendLine(`Not using custom binary path. Using default path`);
-    binPath = path.join(context.globalStorageUri.fsPath, 'bin', 'jsonnet-language-server');
+    channel.appendLine(`Not using custom binary path. Using default path for ${component}`);
+    binPath = path.join(context.globalStorageUri.fsPath, 'bin', binaryName);
     if (process.platform.toString() === 'win32') {
       binPath = `${binPath}.exe`;
     }
@@ -27,18 +48,20 @@ export async function install(context: ExtensionContext, channel: OutputChannel)
       throw new Error(msg);
     }
   }
+
+  const releaseRepository: string = workspace.getConfiguration('jsonnet').get(`${component}.releaseRepository`);
+
   const binPathExists = fs.existsSync(binPath);
   channel.appendLine(`Binary path is ${binPath} (exists: ${binPathExists})`);
 
   // Without auto-update, the process ends here.
-  const enableAutoUpdate: boolean = workspace.getConfiguration('jsonnet').get('languageServer.enableAutoUpdate');
+  const enableAutoUpdate: boolean = workspace.getConfiguration('jsonnet').get(`${component}.enableAutoUpdate`);
   if (!enableAutoUpdate) {
     if (!binPathExists) {
-      const msg =
-        "The language server binary does not exist, please set either 'jsonnet.languageServer.pathToBinary' or 'jsonnet.languageServer.enableAutoUpdate'";
+      const msg = `The jsonnet ${displayName} binary does not exist, please set either 'jsonnet.${component}.pathToBinary' or 'jsonnet.${component}.enableAutoUpdate'`;
       channel.appendLine(msg);
       window.showErrorMessage(msg);
-      throw new Error(msg);
+      return null;
     }
     return binPath;
   }
@@ -76,18 +99,21 @@ export async function install(context: ExtensionContext, channel: OutputChannel)
   if (!binPathExists) {
     // The binary does not exist. Only install if the user says yes.
     const value = await window.showInformationMessage(
-      `The language server does not seem to be installed. Do you wish to install the latest version?`,
+      `The jsonnet ${displayName} does not seem to be installed. Do you wish to install the latest version?`,
       'Yes',
       'No'
     );
-    doUpdate = value === 'Yes';
+    if (value === 'No') {
+      return null;
+    }
+    doUpdate = true;
   } else {
     // The binary exists
     try {
       // Check the version
       let currentVersion = '';
       const result = execFileSync(binPath, ['--version']);
-      const prefix = 'jsonnet-language-server version ';
+      const prefix = `${binaryName} version `;
       if (result.toString().startsWith(prefix)) {
         currentVersion = result.toString().substring(prefix.length).trim();
       } else {
@@ -131,7 +157,7 @@ export async function install(context: ExtensionContext, channel: OutputChannel)
       suffix = '.exe';
     }
 
-    const url = `https://github.com/${releaseRepository}/releases/download/v${latestVersion}/jsonnet-language-server_${latestVersion}_${platform}_${arch}${suffix}`;
+    const url = `https://github.com/${releaseRepository}/releases/download/v${latestVersion}/${binaryName}_${latestVersion}_${platform}_${arch}${suffix}`;
     channel.appendLine(`Downloading ${url}`);
 
     try {
@@ -145,10 +171,10 @@ export async function install(context: ExtensionContext, channel: OutputChannel)
       throw new Error(msg);
     }
 
-    channel.appendLine(`Successfully downloaded the language server version ${latestVersion}`);
-    window.showInformationMessage(`Successfully installed the language server version ${latestVersion}`);
+    channel.appendLine(`Successfully downloaded the ${displayName} version ${latestVersion}`);
+    window.showInformationMessage(`Successfully installed the ${displayName} version ${latestVersion}`);
   } else {
-    channel.appendLine(`Not updating the language server.`);
+    channel.appendLine(`Not updating the ${displayName}.`);
   }
 
   return binPath;

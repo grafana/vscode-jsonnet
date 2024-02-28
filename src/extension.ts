@@ -1,5 +1,19 @@
 import * as path from 'path';
-import { commands, window, workspace, ExtensionContext, Uri, OutputChannel, TextEditor, ViewColumn } from 'vscode';
+import {
+  commands,
+  debug,
+  window,
+  workspace,
+  ExtensionContext,
+  Uri,
+  OutputChannel,
+  TextEditor,
+  ViewColumn,
+  ProviderResult,
+  WorkspaceFolder,
+  DebugConfiguration,
+  DebugConfigurationProviderTriggerKind,
+} from 'vscode';
 import * as fs from 'fs';
 import * as os from 'os';
 import { stringify as stringifyYaml } from 'yaml';
@@ -14,6 +28,7 @@ import {
   ServerOptions,
 } from 'vscode-languageclient/node';
 import { install } from './install';
+import { JsonnetDebugAdapterDescriptorFactory } from './debugger';
 
 let extensionContext: ExtensionContext;
 let client: LanguageClient;
@@ -24,7 +39,40 @@ export async function activate(context: ExtensionContext): Promise<void> {
   extensionContext = context;
 
   await startClient();
+  await installDebugger(context);
   await didChangeConfigHandler();
+  context.subscriptions.push(
+    debug.registerDebugConfigurationProvider(
+      'jsonnet',
+      {
+        provideDebugConfigurations(folder: WorkspaceFolder | undefined): ProviderResult<DebugConfiguration[]> {
+          return [
+            {
+              name: 'Debug current Jsonnet file',
+              request: 'launch',
+              type: 'jsonnet',
+              program: '${file}',
+            },
+          ];
+        },
+      },
+      DebugConfigurationProviderTriggerKind.Dynamic
+    ),
+    commands.registerCommand('jsonnet.debugEditorContents', (resource: Uri) => {
+      let targetResource = resource;
+      if (!targetResource && window.activeTextEditor) {
+        targetResource = window.activeTextEditor.document.uri;
+      }
+      if (targetResource) {
+        debug.startDebugging(undefined, {
+          type: 'jsonnet',
+          name: 'Debug File',
+          request: 'launch',
+          program: targetResource.fsPath,
+        });
+      }
+    })
+  );
 
   context.subscriptions.push(
     workspace.onDidChangeConfiguration(didChangeConfigHandler),
@@ -117,6 +165,14 @@ export function deactivate(): Thenable<void> | undefined {
   return client.stop();
 }
 
+async function installDebugger(context: ExtensionContext): Promise<void> {
+  const binPath = await install(extensionContext, channel, 'debugger');
+  if (!binPath) {
+    return;
+  }
+  debug.registerDebugAdapterDescriptorFactory('jsonnet', new JsonnetDebugAdapterDescriptorFactory(context, binPath));
+}
+
 async function startClient(): Promise<void> {
   const args: string[] = ['--log-level', workspace.getConfiguration('jsonnet').get('languageServer.logLevel')];
   if (workspace.getConfiguration('jsonnet').get('languageServer.tankaMode') === true) {
@@ -126,7 +182,10 @@ async function startClient(): Promise<void> {
     args.push('--lint');
   }
 
-  const binPath = await install(extensionContext, channel);
+  const binPath = await install(extensionContext, channel, 'languageServer');
+  if (!binPath) {
+    return;
+  }
   const executable: Executable = {
     command: binPath,
     args: args,
