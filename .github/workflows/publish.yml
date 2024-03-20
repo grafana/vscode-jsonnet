@@ -30,12 +30,11 @@ jobs:
           repo_secrets: |
             OPEN_VSX_TOKEN=openvsx:token
             VS_MARKETPLACE_TOKEN=vscode-marketplace:token
-      # The registry is broken
-      # - name: Publish to Open VSX
-      #   uses: HaaLeo/publish-vscode-extension@v0
-      #   with:
-      #     pat: ${{ env.OPEN_VSX_TOKEN }}
-      #     registryUrl: https://open-vsx.org
+      - name: Publish to Open VSX
+        uses: HaaLeo/publish-vscode-extension@v0
+        with:
+          pat: ${{ env.OPEN_VSX_TOKEN }}
+          registryUrl: https://open-vsx.org
       - name: Publish to Visual Studio Marketplace
         id: publishToMarketplace
         uses: HaaLeo/publish-vscode-extension@v0
