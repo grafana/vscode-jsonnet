@@ -13,6 +13,7 @@ import {
   WorkspaceFolder,
   DebugConfiguration,
   DebugConfigurationProviderTriggerKind,
+  WebviewPanel,
 } from 'vscode';
 import * as fs from 'fs';
 import * as os from 'os';
@@ -92,6 +93,7 @@ export async function activate(context: ExtensionContext): Promise<void> {
       evalAndDisplay(params, false);
     }),
     commands.registerCommand('jsonnet.evalFile', evalFileFunc(false)),
+    commands.registerCommand('jsonnet.evalFileContinous', evalContinuouslyFileFunc(false)),
     commands.registerCommand('jsonnet.evalFileYaml', evalFileFunc(true)),
     commands.registerCommand('jsonnet.evalExpression', evalExpressionFunc(false)),
     commands.registerCommand('jsonnet.evalExpressionYaml', evalExpressionFunc(true))
@@ -106,6 +108,35 @@ function evalFileFunc(yaml: boolean) {
       arguments: [evalFilePath(editor)],
     };
     evalAndDisplay(params, yaml);
+  };
+}
+
+function evalContinuouslyFileFunc(yaml: boolean) {
+
+  const currentFilePath = evalFilePath(window.activeTextEditor);
+
+  const watcher = workspace.createFileSystemWatcher(currentFilePath);
+
+  return async () => {
+    const params: ExecuteCommandParams = {
+      command: `jsonnet.evalFile`,
+      arguments: [currentFilePath],
+    };
+    const workspaceConfig = workspace.getConfiguration('jsonnet');
+    const PauseTime : number = workspaceConfig.get('languageServer.evalContinousPauseTime');
+
+    const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'jsonnet-eval'));
+    const tempFile = path.join(tempDir, 'result.json');
+    const uri = Uri.file(tempFile);
+    fs.writeFileSync(tempFile, '{}');
+
+    let end = window.showTextDocument(uri, {
+      preview: true,
+      viewColumn: ViewColumn.Beside,
+    });
+    watcher.onDidChange((e) => {
+      evalOnDisplay(params, yaml, tempDir)
+    });
   };
 }
 
@@ -124,6 +155,30 @@ function evalExpressionFunc(yaml: boolean) {
       }
     });
   };
+}
+
+function evalOnDisplay(params: ExecuteCommandParams, yaml: boolean, tmpdir): void {
+  channel.appendLine(`Sending eval request: ${JSON.stringify(params)}`);
+  client
+    .sendRequest(ExecuteCommandRequest.type, params)
+    .then((result) => {
+      const tempFile = path.join(tmpdir, 'result.json');
+      fs.writeFileSync(tempFile, result);
+
+      if (yaml) {
+        const file = fs.readFileSync(tempFile, 'utf8');
+        const parsed = JSON.parse(file);
+        const yamlString = stringifyYaml(parsed);
+        const tempYamlFile = path.join(tmpdir, 'result.yaml');
+        fs.writeFileSync(tempYamlFile, yamlString);
+      }      
+    })
+    .catch((err) => {
+      window.showErrorMessage(err.message);
+      const tempFile = path.join(tmpdir, 'result.json');
+      fs.writeFileSync(tempFile, err.message);
+    });
+
 }
 
 function evalAndDisplay(params: ExecuteCommandParams, yaml: boolean): void {
@@ -151,6 +206,14 @@ function evalAndDisplay(params: ExecuteCommandParams, yaml: boolean): void {
     })
     .catch((err) => {
       window.showErrorMessage(err.message);
+      const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'jsonnet-eval'));
+      const tempFile = path.join(tempDir, 'result.json');
+      fs.writeFileSync(tempFile, err.message);
+      const uri = Uri.file(tempFile);
+        window.showTextDocument(uri, {
+        preview: true,
+        viewColumn: ViewColumn.Beside,
+      });
     });
 }
 

@@ -45,6 +45,12 @@
 					"alt": "jsonnet.evalFileYaml",
 					"group": "navigation",
 					"when": "resourceLangId == jsonnet"
+				},
+        {
+					"command": "jsonnet.evalFileContinous",
+					"alt": "jsonnet.evalFileYaml",
+					"group": "navigation",
+					"when": "resourceLangId == jsonnet"
 				}
 			],
 			"editor/title/run": [
@@ -64,6 +70,12 @@
 			{
 				"command": "jsonnet.evalFile",
 				"title": "Jsonnet: Evaluate File",
+				"enablement": "resourceLangId == jsonnet",
+				"icon": "$(open-preview)"
+			},
+      {
+				"command": "jsonnet.evalFileContinous",
+				"title": "Jsonnet: Evaluate File Continious",
 				"enablement": "resourceLangId == jsonnet",
 				"icon": "$(open-preview)"
 			},
