@@ -113,30 +113,32 @@ function evalFileFunc(yaml: boolean) {
 
 function evalContinuouslyFileFunc(yaml: boolean) {
 
-  const currentFilePath = evalFilePath(window.activeTextEditor);
-
-  const watcher = workspace.createFileSystemWatcher(currentFilePath);
-
   return async () => {
-    const params: ExecuteCommandParams = {
-      command: `jsonnet.evalFile`,
-      arguments: [currentFilePath],
-    };
-    const workspaceConfig = workspace.getConfiguration('jsonnet');
-    const PauseTime : number = workspaceConfig.get('languageServer.evalContinousPauseTime');
+    let currentFilePath = evalFilePath(window.activeTextEditor);
+    window.onDidChangeActiveTextEditor((editor) => {
+      currentFilePath = editor.document.uri.fsPath
+    });
+    const watcher = workspace.createFileSystemWatcher(currentFilePath);
 
     const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'jsonnet-eval'));
     const tempFile = path.join(tempDir, 'result.json');
     const uri = Uri.file(tempFile);
     fs.writeFileSync(tempFile, '{}');
 
-    let end = window.showTextDocument(uri, {
+    const params: ExecuteCommandParams = {
+      command: `jsonnet.evalFile`,
+      arguments: [currentFilePath],
+    };
+    evalOnDisplay(params, yaml, tempDir)
+
+    let resultViewer = window.showTextDocument(uri, {
       preview: true,
       viewColumn: ViewColumn.Beside,
     });
     watcher.onDidChange((e) => {
-      evalOnDisplay(params, yaml, tempDir)
-    });
+        evalOnDisplay(params, yaml, tempDir)
+      }
+    );
   };
 }
 
@@ -161,24 +163,29 @@ function evalOnDisplay(params: ExecuteCommandParams, yaml: boolean, tmpdir): voi
   channel.appendLine(`Sending eval request: ${JSON.stringify(params)}`);
   client
     .sendRequest(ExecuteCommandRequest.type, params)
-    .then((result) => {
-      const tempFile = path.join(tmpdir, 'result.json');
-      fs.writeFileSync(tempFile, result);
+    .then(
+      (result) => {
+        const tempFile = path.join(tmpdir, 'result.json');
+        fs.writeFileSync(tempFile, result);
 
-      if (yaml) {
-        const file = fs.readFileSync(tempFile, 'utf8');
-        const parsed = JSON.parse(file);
-        const yamlString = stringifyYaml(parsed);
-        const tempYamlFile = path.join(tmpdir, 'result.yaml');
-        fs.writeFileSync(tempYamlFile, yamlString);
+        if (yaml) {
+          const file = fs.readFileSync(tempFile, 'utf8');
+          const parsed = JSON.parse(file);
+          const yamlString = stringifyYaml(parsed);
+          const tempYamlFile = path.join(tmpdir, 'result.yaml');
+          fs.writeFileSync(tempYamlFile, yamlString);
       }      
-    })
-    .catch((err) => {
-      window.showErrorMessage(err.message);
-      const tempFile = path.join(tmpdir, 'result.json');
-      fs.writeFileSync(tempFile, err.message);
-    });
-
+    }
+  )
+    .catch(
+      (err) => {
+        window.showErrorMessage(err.message);
+        // error.json
+        const tempFile = path.join(tmpdir, 'result.json');
+        fs.writeFileSync(tempFile, err.message);
+        console.log("Error File: ", tempFile);
+    }
+  )
 }
 
 function evalAndDisplay(params: ExecuteCommandParams, yaml: boolean): void {
