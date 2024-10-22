@@ -215,6 +215,12 @@
 					"default": false,
 					"description": "If enabled, the LSP will publish eval diagnostics. May produce false positives as the evaluator may not have the full evaluation context. Also, if you work with very large jsonnet projects, you may want to disable this for performance reasons"
 				},
+        "jsonnet.languageServer.continuousEval": {
+					"scope": "resource",
+					"type": "boolean",
+					"default": true,
+					"description": "Whether to continuously evaluate the selected file"
+				},
 				"jsonnet.languageServer.lint": {
 					"scope": "resource",
 					"type": "boolean",
