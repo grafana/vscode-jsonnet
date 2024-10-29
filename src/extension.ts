@@ -109,9 +109,7 @@ function evalFileFunc(yaml: boolean) {
     const tempFile = createTmpFile(yaml);
     const uri = Uri.file(tempFile);
 
-    if (!yaml) {
-      fs.writeFileSync(tempFile, '{}');
-    }
+    fs.writeFileSync(tempFile, '"Evaluating..."');
 
     if (workspace.getConfiguration('jsonnet').get('languageServer.continuousEval') === false) {
       evalAndDisplay(params, yaml, tempFile);
@@ -145,15 +143,37 @@ function createTmpFile(yaml): string {
 
 function evalExpressionFunc(yaml: boolean) {
   return async () => {
-    const editor = window.activeTextEditor;
     window.showInputBox({ prompt: 'Expression to evaluate' }).then(async (expr) => {
       if (expr) {
+        const currentFilePath = evalFilePath(window.activeTextEditor);
         const params: ExecuteCommandParams = {
           command: `jsonnet.evalExpression`,
-          arguments: [evalFilePath(editor), expr],
+          arguments: [currentFilePath, expr],
         };
         const tempFile = createTmpFile(yaml);
-        evalAndDisplay(params, yaml, tempFile);
+        const uri = Uri.file(tempFile);
+
+        fs.writeFileSync(tempFile, '"Evaluating..."');
+
+        if (workspace.getConfiguration('jsonnet').get('languageServer.continuousEval') === false) {
+          evalAndDisplay(params, yaml, tempFile);
+        }
+        else {
+          // Initial eval
+          evalOnDisplay(params, yaml, tempFile);
+
+          const watcher = workspace.createFileSystemWatcher(currentFilePath);
+
+          window.showTextDocument(uri, {
+            preview: true,
+            viewColumn: ViewColumn.Beside,
+            preserveFocus: true,
+          });
+          watcher.onDidChange((e) => {
+            evalOnDisplay(params, yaml, tempFile);
+          }
+          );
+        }
       } else {
         window.showErrorMessage('No expression provided');
       }
