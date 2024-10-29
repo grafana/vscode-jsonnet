@@ -109,19 +109,19 @@ function evalFileFunc(yaml: boolean) {
     const tempFile = createTmpFile(yaml);
     const uri = Uri.file(tempFile);
 
-    if (!yaml){
+    if (!yaml) {
       fs.writeFileSync(tempFile, '{}');
     }
 
     if (workspace.getConfiguration('jsonnet').get('languageServer.continuousEval') === false) {
       evalAndDisplay(params, yaml, tempFile);
     }
-    else{
+    else {
 
       // Initial eval
       evalOnDisplay(params, yaml, tempFile);
 
-      let watcher = workspace.createFileSystemWatcher(currentFilePath);
+      const watcher = workspace.createFileSystemWatcher(currentFilePath);
 
       window.showTextDocument(uri, {
         preview: true,
@@ -129,8 +129,8 @@ function evalFileFunc(yaml: boolean) {
         preserveFocus: true,
       });
       watcher.onDidChange((e) => {
-          evalOnDisplay(params, yaml, tempFile);
-        }
+        evalOnDisplay(params, yaml, tempFile);
+      }
       );
     }
   };
@@ -207,7 +207,7 @@ function evalAndDisplay(params: ExecuteCommandParams, yaml: boolean, tempFile: s
       window.showErrorMessage(err.message);
       fs.writeFileSync(tempFile, err.message);
       const uri = Uri.file(tempFile);
-        window.showTextDocument(uri, {
+      window.showTextDocument(uri, {
         preview: true,
         viewColumn: ViewColumn.Beside,
       });
