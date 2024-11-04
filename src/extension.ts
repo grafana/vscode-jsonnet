@@ -189,6 +189,7 @@ function evalJsonnet(params: ExecuteCommandParams, yaml: boolean, tempFile: stri
         window.showTextDocument(uri, {
           preview: true,
           viewColumn: ViewColumn.Beside,
+          preserveFocus: true,
         });
       }
     })
@@ -200,6 +201,7 @@ function evalJsonnet(params: ExecuteCommandParams, yaml: boolean, tempFile: stri
         window.showTextDocument(uri, {
           preview: true,
           viewColumn: ViewColumn.Beside,
+          preserveFocus: true,
         });
       }
     });
