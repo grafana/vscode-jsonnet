@@ -100,7 +100,7 @@ export async function activate(context: ExtensionContext): Promise<void> {
   );
 }
 
-function evalCommand(yaml: boolean, expr: string = '') {
+function evalCommand(yaml: boolean, expr = '') {
   return async () => {
     const currentFilePath = evalFilePath(window.activeTextEditor);
     const params: ExecuteCommandParams = {
@@ -155,7 +155,7 @@ function evalExpressionCommand(yaml: boolean) {
   return async () => {
     window.showInputBox({ prompt: 'Expression to evaluate' }).then(async (expr) => {
       if (expr) {
-        evalCommand(yaml, expr)
+        evalCommand(yaml, expr);
       } else {
         window.showErrorMessage('No expression provided');
       }
@@ -170,7 +170,7 @@ function createTmpFile(yaml): string {
   return tempFile;
 }
 
-function evalJsonnet(params: ExecuteCommandParams, yaml: boolean, tempFile: string, display: boolean = false): void {
+function evalJsonnet(params: ExecuteCommandParams, yaml: boolean, tempFile: string, display = false): void {
   channel.appendLine(`Sending eval request: ${JSON.stringify(params)} for ${tempFile}`);
   client
     .sendRequest(ExecuteCommandRequest.type, params)
