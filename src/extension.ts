@@ -95,13 +95,22 @@ export async function activate(context: ExtensionContext): Promise<void> {
     }),
     commands.registerCommand('jsonnet.evalFile', evalCommand(false)),
     commands.registerCommand('jsonnet.evalFileYaml', evalCommand(true)),
-    commands.registerCommand('jsonnet.evalExpression', evalExpressionCommand(false)),
-    commands.registerCommand('jsonnet.evalExpressionYaml', evalExpressionCommand(true))
+    commands.registerCommand('jsonnet.evalExpression', evalCommand(false, true)),
+    commands.registerCommand('jsonnet.evalExpressionYaml', evalCommand(true, true))
   );
 }
 
-function evalCommand(yaml: boolean, expr = '') {
+function evalCommand(yaml: boolean, promptExpr = false) {
   return async () => {
+    let expr = '';
+    if (promptExpr) {
+      expr = await window.showInputBox({ prompt: 'Expression to evaluate' });
+      if (expr === undefined || expr === '') {
+        window.showErrorMessage('No expression provided');
+        return;
+      }
+    }
+
     const currentFilePath = evalFilePath(window.activeTextEditor);
     const params: ExecuteCommandParams = {
       command: expr === '' ? `jsonnet.evalFile` : `jsonnet.evalExpression`,
@@ -148,18 +157,6 @@ function evalCommand(yaml: boolean, expr = '') {
         disposable.dispose();
       });
     }
-  };
-}
-
-function evalExpressionCommand(yaml: boolean) {
-  return async () => {
-    window.showInputBox({ prompt: 'Expression to evaluate' }).then(async (expr) => {
-      if (expr) {
-        evalCommand(yaml, expr);
-      } else {
-        window.showErrorMessage('No expression provided');
-      }
-    });
   };
 }
 
