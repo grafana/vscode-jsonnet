@@ -83,7 +83,7 @@
                     "name": "keyword.other.jsonnet"
                 },
                 {
-                    "match": "\\b(self|super|import|importstr|local|tailstrict)\\b",
+                    "match": "\\b(self|super|import|importstr|importbin|local|tailstrict)\\b",
                     "name": "keyword.other.jsonnet"
                 },
                 {
