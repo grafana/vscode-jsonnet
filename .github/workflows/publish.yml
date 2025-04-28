@@ -3,45 +3,51 @@ on:
     tags:
       - "*"
 
-# These permissions are needed to assume roles from Github's OIDC.
 permissions:
-  contents: write
-  id-token: write
+  contents: read
 
 name: Publish Extension
 jobs:
   eslint:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
       - run: npm install
       - run: npm run compile
       - run: npm run lint
   publish:
     needs: eslint
     runs-on: ubuntu-latest
+    # These permissions are needed to assume roles from Github's OIDC.
+    permissions:
+      contents: write
+      id-token: write 
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
       - run: npm install
       - id: get-secrets
-        uses: grafana/shared-workflows/actions/get-vault-secrets@main
+        uses: grafana/shared-workflows/actions/get-vault-secrets@28361cdb22223e5f1e34358c86c20908e7248760 # get-vault-secrets-v1.1.0
         with:
           # Secrets placed in the ci/repo/grafana/<repo>/<path> path in Vault
           repo_secrets: |
             OPEN_VSX_TOKEN=openvsx:token
             VS_MARKETPLACE_TOKEN=vscode-marketplace:token
       - name: Publish to Open VSX
-        uses: HaaLeo/publish-vscode-extension@v0
+        uses: HaaLeo/publish-vscode-extension@ca5561daa085dee804bf9f37fe0165785a9b14db # v2.0.0
         with:
           pat: ${{ env.OPEN_VSX_TOKEN }}
           registryUrl: https://open-vsx.org
       - name: Publish to Visual Studio Marketplace
         id: publishToMarketplace
-        uses: HaaLeo/publish-vscode-extension@v0
+        uses: HaaLeo/publish-vscode-extension@ca5561daa085dee804bf9f37fe0165785a9b14db # v2.0.0
         with:
           pat: ${{ env.VS_MARKETPLACE_TOKEN }}
           registryUrl: https://marketplace.visualstudio.com
-      - uses: ncipollo/release-action@v1
+      - uses: ncipollo/release-action@440c8c1cb0ed28b9f43e4d1d670870f059653174 # v1.16.0
         with:
           allowUpdates: true
           artifacts: "${{ steps.publishToMarketplace.outputs.vsixPath }}"
