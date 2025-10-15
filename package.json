@@ -221,6 +221,12 @@
 					"default": true,
 					"description": "Whether to continuously evaluate the selected file"
 				},
+        "jsonnet.languageServer.showPopupOnError": {
+          "scope": "resource",
+          "type": "boolean",
+          "default": true,
+          "description": "Whether to continuously evaluate the selected file"
+        },
 				"jsonnet.languageServer.lint": {
 					"scope": "resource",
 					"type": "boolean",
