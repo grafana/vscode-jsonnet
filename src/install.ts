@@ -80,6 +80,15 @@ export async function install(
       latestVersion = latestVersion.substring(1);
     }
   } catch (e) {
+    // If we already have a binary on disk, prefer continuing with it rather than failing activation.
+    if (binPathExists) {
+      const warnMsg = `Failed to fetch latest release from ${releaseUrl}. Continuing with the current binary.`;
+      channel.appendLine(warnMsg);
+      channel.appendLine(e);
+      window.showWarningMessage(warnMsg);
+      return binPath;
+    }
+
     const msg = `Failed to fetch latest release from ${releaseUrl}`;
     channel.appendLine(msg);
     channel.appendLine(e);
