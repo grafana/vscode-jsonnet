@@ -276,6 +276,7 @@ async function didChangeConfigHandler() {
       resolve_paths_with_tanka: workspaceConfig.get('languageServer.tankaMode'),
       enable_lint_diagnostics: workspaceConfig.get('languageServer.lint'),
       enable_eval_diagnostics: workspaceConfig.get('languageServer.eval'),
+      eval_binary: workspaceConfig.get('languageServer.evalBinary'),
       formatting: workspaceConfig.get('languageServer.formatting'),
     },
   });
