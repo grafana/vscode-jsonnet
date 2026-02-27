@@ -1,15 +1,19 @@
 import * as assert from 'assert';
 import * as vscode from 'vscode';
 import {
-  ensureExtensionReady,
+  configureJsonnetForTest,
   openScenarioDocument,
   readScenarioExpected,
   waitForValue,
 } from './testHarness';
 
 suite('Diagnostics', () => {
-  suiteSetup(async () => {
-    await ensureExtensionReady();
+  setup(async () => {
+    await configureJsonnetForTest({
+      'languageServer.continuousEval': false,
+      'languageServer.enableEvalDiagnostics': true,
+      'languageServer.enableLintDiagnostics': true,
+    });
   });
 
   test('shows type errors as error diagnostics', async () => {

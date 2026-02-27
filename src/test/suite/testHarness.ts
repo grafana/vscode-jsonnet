@@ -3,8 +3,6 @@ import * as fs from 'fs';
 import * as path from 'path';
 import * as vscode from 'vscode';
 
-let ready: Promise<void> | undefined;
-
 type ScenarioEvalResult = {
   result?: unknown;
   error?: {
@@ -39,45 +37,29 @@ export type ScenarioExpected = {
 };
 
 export async function ensureExtensionReady(): Promise<void> {
-  if (!ready) {
-    ready = (async () => {
-      const root = scenarioRoot();
-      const languageServerPath = resolveLanguageServerPath(root);
-      const fakeDebugger = fakeToolPath(root, 'fake-jsonnet-debugger');
+  const extension = findExtension();
+  if (!extension.isActive) {
+    await extension.activate();
+  }
+}
 
-      const config = vscode.workspace.getConfiguration('jsonnet');
-      await config.update(
-        'languageServer.enableAutoUpdate',
-        false,
-        vscode.ConfigurationTarget.Workspace
-      );
-      await config.update(
-        'languageServer.pathToBinary',
-        languageServerPath,
-        vscode.ConfigurationTarget.Workspace
-      );
-      await config.update(
-        'languageServer.continuousEval',
-        false,
-        vscode.ConfigurationTarget.Workspace
-      );
-      await config.update(
-        'debugger.enableAutoUpdate',
-        false,
-        vscode.ConfigurationTarget.Workspace
-      );
-      await config.update(
-        'debugger.pathToBinary',
-        fakeDebugger,
-        vscode.ConfigurationTarget.Workspace
-      );
+export async function configureJsonnetForTest(
+  settings: Record<string, unknown>
+): Promise<void> {
+  const baseSettings: Record<string, unknown> = {
+    'languageServer.enableAutoUpdate': false,
+    'languageServer.pathToBinary': languageServerPathForTests(),
+    'debugger.enableAutoUpdate': false,
+    'debugger.pathToBinary': debuggerPathForTests(),
+  };
 
-      const extension = findExtension();
-      await extension.activate();
-    })();
+  const config = vscode.workspace.getConfiguration('jsonnet');
+
+  for (const [key, value] of Object.entries({ ...baseSettings, ...settings })) {
+    await config.update(key, value, vscode.ConfigurationTarget.Workspace);
   }
 
-  await ready;
+  await ensureExtensionReady();
 }
 
 export function scenarioRoot(): string {
@@ -88,6 +70,14 @@ export function scenarioRoot(): string {
 
 export function isRealLspMode(): boolean {
   return process.env.JSONNET_TEST_REAL_LSP === '1';
+}
+
+export function languageServerPathForTests(): string {
+  return resolveLanguageServerPath(scenarioRoot());
+}
+
+export function debuggerPathForTests(): string {
+  return fakeToolPath(scenarioRoot(), 'fake-jsonnet-debugger');
 }
 
 export function readScenarioExpected(relativePath: string): ScenarioExpected {

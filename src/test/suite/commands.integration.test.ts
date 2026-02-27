@@ -1,13 +1,17 @@
 import * as assert from 'assert';
 import * as vscode from 'vscode';
 import {
-  ensureExtensionReady,
+  configureJsonnetForTest,
   openScenarioDocument,
 } from './testHarness';
 
 suite('Extension Commands', () => {
-  suiteSetup(async () => {
-    await ensureExtensionReady();
+  setup(async () => {
+    await configureJsonnetForTest({
+      'languageServer.continuousEval': false,
+      'languageServer.enableEvalDiagnostics': false,
+      'languageServer.enableLintDiagnostics': false,
+    });
   });
 
   test('registers Jsonnet commands after activation', async () => {

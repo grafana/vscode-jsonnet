@@ -3,7 +3,7 @@ import * as vscode from 'vscode';
 import { parse as parseYaml } from 'yaml';
 import {
   closeEvalEditors,
-  ensureExtensionReady,
+  configureJsonnetForTest,
   isRealLspMode,
   openScenarioDocument,
   readScenarioExpected,
@@ -11,8 +11,12 @@ import {
 } from './testHarness';
 
 suite('Eval Commands', () => {
-  suiteSetup(async () => {
-    await ensureExtensionReady();
+  setup(async () => {
+    await configureJsonnetForTest({
+      'languageServer.continuousEval': false,
+      'languageServer.enableEvalDiagnostics': false,
+      'languageServer.enableLintDiagnostics': false,
+    });
   });
 
   teardown(async () => {

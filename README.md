@@ -77,8 +77,8 @@ transitively, then opens a quick pick to jump to one of them.
   Tanka-style trees.
 - Scenario expectations live in `*.expected.json` sidecars. The fake LSP reads
   those files for eval, diagnostics, and importer responses.
-- Integration harness forces `jsonnet.languageServer.enableAutoUpdate=false`
-  and `jsonnet.debugger.enableAutoUpdate=false`.
+- Tests configure their own `jsonnet.*` settings and restart the language
+  server for each test case to avoid cross-test setting bleed.
 
 [Open VSX]: https://open-vsx.org/extension/Grafana/vscode-jsonnet
 [rustanka-lsp documentation]: https://github.com/grafana/rustanka/tree/main/docs/lsp
