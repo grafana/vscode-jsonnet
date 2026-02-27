@@ -4,6 +4,7 @@ import * as fs from 'fs';
 import { execFile } from 'child_process';
 import * as path from 'path';
 import { promisify } from 'util';
+import { createHash } from 'crypto';
 
 export type Component = 'languageServer' | 'debugger';
 
@@ -25,6 +26,13 @@ const ComponentDetails: Record<
 };
 
 const execFileAsync = promisify(execFile);
+const MAX_REDIRECTS = 5;
+const REQUEST_TIMEOUT_MS = 15000;
+
+type ReleaseAsset = {
+  name?: string;
+  browser_download_url?: string;
+};
 
 export async function install(
   context: ExtensionContext,
@@ -73,7 +81,7 @@ export async function install(
   const releaseUrl = `https://api.github.com/repos/${releaseRepository}/releases/latest`;
   channel.appendLine(`Auto-update is enabled. Fetching latest release from ${releaseUrl}`);
 
-  let releaseData: { name?: string; tag_name?: string; assets?: { name?: string; browser_download_url?: string }[] } = {};
+  let releaseData: { name?: string; tag_name?: string; assets?: ReleaseAsset[] } = {};
   let latestVersion = '';
   try {
     const body = await githubApiRequest(releaseUrl);
@@ -175,15 +183,23 @@ export async function install(
       suffix = '.exe';
     }
 
-    const matchingAssetUrl = findMatchingReleaseAssetUrl(releaseData.assets ?? [], binaryName, platform, arch);
+    const matchingAsset = findMatchingReleaseAsset(releaseData.assets ?? [], binaryName, platform, arch);
     const url =
-      matchingAssetUrl ||
+      matchingAsset?.browser_download_url ||
       `https://github.com/${releaseRepository}/releases/download/v${latestVersion}/${binaryName}_${latestVersion}_${platform}_${arch}${suffix}`;
     channel.appendLine(`Downloading ${url}`);
+    const downloadedAssetName =
+      matchingAsset?.name || path.basename(new URL(url).pathname);
 
     try {
       await download(url, binPath);
-      await fs.promises.chmod(binPath, 0o777);
+      await verifySha256IfAvailable(
+        releaseData.assets ?? [],
+        downloadedAssetName,
+        binPath,
+        channel
+      );
+      await fs.promises.chmod(binPath, 0o755);
     } catch (e) {
       const msg = `Failed to download ${url} to ${binPath}`;
       channel.appendLine(msg);
@@ -201,26 +217,33 @@ export async function install(
   return binPath;
 }
 
-function download(uri, filename) {
+function download(uri: string, filename: string, redirects = 0): Promise<void> {
+  if (redirects > MAX_REDIRECTS) {
+    return Promise.reject(new Error(`too many redirects while downloading ${uri}`));
+  }
   return new Promise((resolve, reject) => {
     const onError = function (e) {
       void fs.promises.unlink(filename).catch(() => undefined);
       reject(e);
     };
-    https
-      .get(uri, function (response) {
+    const request = https
+      .get(uri, { timeout: REQUEST_TIMEOUT_MS }, function (response) {
         if (response.statusCode >= 200 && response.statusCode < 300) {
           const fileStream = fs.createWriteStream(filename);
           fileStream.on('error', onError);
           fileStream.on('close', resolve);
           response.pipe(fileStream);
         } else if (response.headers.location) {
-          resolve(download(response.headers.location, filename));
+          const redirected = new URL(response.headers.location, uri).toString();
+          resolve(download(redirected, filename, redirects + 1));
         } else {
           reject(new Error(response.statusCode + ' ' + response.statusMessage));
         }
       })
       .on('error', onError);
+    request.setTimeout(REQUEST_TIMEOUT_MS, () => {
+      request.destroy(new Error(`request timed out after ${REQUEST_TIMEOUT_MS}ms`));
+    });
   });
 }
 
@@ -253,12 +276,12 @@ function parseVersionFromOutput(output: string, binaryName: string): string | nu
   return null;
 }
 
-function findMatchingReleaseAssetUrl(
-  assets: { name?: string; browser_download_url?: string }[],
+function findMatchingReleaseAsset(
+  assets: ReleaseAsset[],
   binaryName: string,
   platform: string,
   arch: string
-): string | null {
+): ReleaseAsset | null {
   const platformAliases: Record<string, string[]> = {
     linux: ['linux'],
     darwin: ['darwin', 'macos', 'osx'],
@@ -294,20 +317,127 @@ function findMatchingReleaseAssetUrl(
   }
 
   candidates.sort((a, b) => a.name.length - b.name.length);
-  return candidates[0].browser_download_url;
+  return candidates[0];
 }
 
-function githubApiRequest(url: string, options: https.RequestOptions = {}, encoding = 'utf8'): Promise<string> {
+async function verifySha256IfAvailable(
+  assets: ReleaseAsset[],
+  downloadedAssetName: string,
+  downloadedPath: string,
+  channel: OutputChannel
+): Promise<void> {
+  const checksumAsset = findChecksumAsset(assets, downloadedAssetName);
+  if (!checksumAsset?.browser_download_url) {
+    channel.appendLine(
+      `No checksum asset found for ${downloadedAssetName}; skipping verification`
+    );
+    return;
+  }
+
+  const checksumFile = await githubApiRequest(checksumAsset.browser_download_url);
+  const expected = parseSha256Checksum(checksumFile, downloadedAssetName);
+  if (!expected) {
+    throw new Error(
+      `could not parse checksum for ${downloadedAssetName} from ${checksumAsset.name}`
+    );
+  }
+
+  const actual = await sha256File(downloadedPath);
+  if (actual.toLowerCase() !== expected.toLowerCase()) {
+    throw new Error(
+      `checksum mismatch for ${downloadedAssetName} ` +
+        `(expected ${expected}, got ${actual})`
+    );
+  }
+  channel.appendLine(`Verified sha256 checksum for ${downloadedAssetName}`);
+}
+
+function findChecksumAsset(
+  assets: ReleaseAsset[],
+  downloadedAssetName: string
+): ReleaseAsset | null {
+  const normalized = downloadedAssetName.toLowerCase();
+  const direct = assets.find(
+    (asset) => asset.name?.toLowerCase() === `${normalized}.sha256`
+  );
+  if (direct) {
+    return direct;
+  }
+  return (
+    assets.find((asset) => {
+      const name = asset.name?.toLowerCase();
+      return Boolean(
+        name &&
+          name.endsWith('.sha256') &&
+          name.includes(normalized)
+      );
+    }) || null
+  );
+}
+
+function parseSha256Checksum(contents: string, expectedName: string): string | null {
+  const lines = contents
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter((line) => line.length > 0);
+  let firstHash: string | null = null;
+
+  for (const line of lines) {
+    const match = line.match(/^([0-9a-fA-F]{64})(?:\s+[* ]?(.+))?$/);
+    if (!match) {
+      continue;
+    }
+    const hash = match[1];
+    const name = match[2]?.trim();
+    if (!firstHash) {
+      firstHash = hash;
+    }
+    if (name && path.basename(name) === path.basename(expectedName)) {
+      return hash;
+    }
+    if (!name) {
+      return hash;
+    }
+  }
+  return firstHash;
+}
+
+async function sha256File(filePath: string): Promise<string> {
+  const hash = createHash('sha256');
+  const file = await fs.promises.readFile(filePath);
+  hash.update(file);
+  return hash.digest('hex');
+}
+
+function githubApiRequest(
+  url: string,
+  options: https.RequestOptions = {},
+  encoding = 'utf8',
+  redirects = 0
+): Promise<string> {
+  if (redirects > MAX_REDIRECTS) {
+    return Promise.reject(new Error(`too many redirects while requesting ${url}`));
+  }
   if (options.headers === undefined) {
     options.headers = {};
   }
   options.headers['User-Agent'] = 'vscode-jsonnet';
+  options.timeout = REQUEST_TIMEOUT_MS;
   return new Promise((resolve, reject) => {
-    https
+    const request = https
       .request(url, options, (res) => {
-        if (res.statusCode === 301 || res.statusCode === 302) {
+        if (
+          (res.statusCode === 301 ||
+            res.statusCode === 302 ||
+            res.statusCode === 307 ||
+            res.statusCode === 308) &&
+          res.headers.location
+        ) {
           // follow redirects
-          return resolve(githubApiRequest(res.headers.location, options, encoding));
+          const redirected = new URL(res.headers.location, url).toString();
+          return resolve(
+            githubApiRequest(redirected, options, encoding, redirects + 1)
+          );
         }
         if (res.statusCode !== 200) {
           return reject(res.statusMessage);
@@ -318,7 +448,13 @@ function githubApiRequest(url: string, options: https.RequestOptions = {}, encod
           .on('data', (data) => (body += data))
           .on('end', () => resolve(body));
       })
-      .on('error', reject)
+      .on('error', reject);
+    request.setTimeout(REQUEST_TIMEOUT_MS, () => {
+      request.destroy(
+        new Error(`request timed out after ${REQUEST_TIMEOUT_MS}ms`)
+      );
+    });
+    request
       .end();
   });
 }
