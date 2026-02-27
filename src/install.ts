@@ -287,7 +287,7 @@ async function sha256File(filePath: string): Promise<string> {
 function githubApiRequest(
   url: string,
   options: https.RequestOptions = {},
-  encoding = 'utf8',
+  encoding: BufferEncoding = 'utf8',
   redirects = 0
 ): Promise<string> {
   if (redirects > MAX_REDIRECTS) {

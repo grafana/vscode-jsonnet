@@ -3,3 +3,4 @@ out/
 *.tsbuildinfo
 vscode-jsonnet-*.vsix
 .vscode
+.vscode-test/

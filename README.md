@@ -66,6 +66,14 @@ transitively, then opens a quick pick to jump to one of them.
    language server
 3. Enjoy
 
+## Development Testing
+
+- `npm test` runs fast unit tests.
+- `npm run test:integration` runs VS Code extension-host integration tests
+  through `@vscode/test-cli`.
+- Integration scenarios live in `test-scenarios/` and include Jsonnet and
+  Tanka-style trees.
+
 [Open VSX]: https://open-vsx.org/extension/Grafana/vscode-jsonnet
 [rustanka-lsp documentation]: https://github.com/grafana/rustanka/tree/main/docs/lsp
 [VSCode Marketplace]: https://marketplace.visualstudio.com/items?itemName=Grafana.vscode-jsonnet

@@ -1,0 +1,4 @@
+{
+  kind: "tanka",
+  environment: "default",
+}

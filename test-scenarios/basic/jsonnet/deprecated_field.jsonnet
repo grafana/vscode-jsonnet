@@ -1,0 +1,3 @@
+{
+  deprecatedField: "legacy",
+}
