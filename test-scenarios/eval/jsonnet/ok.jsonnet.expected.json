@@ -1,0 +1,8 @@
+{
+  "evalFile": {
+    "result": {
+      "greeting": "hello",
+      "target": "world"
+    }
+  }
+}

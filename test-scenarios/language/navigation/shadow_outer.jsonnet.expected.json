@@ -1,0 +1,43 @@
+{
+  "definition": {
+    "uri": "language/navigation/shadow_outer.jsonnet",
+    "range": {
+      "start": {
+        "line": 0,
+        "character": 6
+      },
+      "end": {
+        "line": 0,
+        "character": 7
+      }
+    }
+  },
+  "references": [
+    {
+      "uri": "language/navigation/shadow_outer.jsonnet",
+      "range": {
+        "start": {
+          "line": 0,
+          "character": 6
+        },
+        "end": {
+          "line": 0,
+          "character": 7
+        }
+      }
+    },
+    {
+      "uri": "language/navigation/shadow_outer.jsonnet",
+      "range": {
+        "start": {
+          "line": 3,
+          "character": 9
+        },
+        "end": {
+          "line": 3,
+          "character": 10
+        }
+      }
+    }
+  ]
+}

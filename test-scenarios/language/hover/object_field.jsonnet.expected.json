@@ -1,0 +1,11 @@
+{
+  "hover": {
+    "contents": [
+      "`number`",
+      {
+        "language": "jsonnet",
+        "value": "obj.alpha"
+      }
+    ]
+  }
+}

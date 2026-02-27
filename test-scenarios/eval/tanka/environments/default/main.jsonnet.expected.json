@@ -1,0 +1,9 @@
+{
+  "evalFile": {
+    "result": {
+      "source": "tanka/environments/default/main.jsonnet",
+      "kind": "tanka",
+      "environment": "default"
+    }
+  }
+}

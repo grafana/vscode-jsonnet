@@ -1,0 +1,7 @@
+{
+  "evalFile": {
+    "result": {
+      "error": "Evaluation error: runtime error: boom"
+    }
+  }
+}

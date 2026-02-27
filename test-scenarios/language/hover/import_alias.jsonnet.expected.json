@@ -1,0 +1,11 @@
+{
+  "hover": {
+    "contents": [
+      "`{foo(...): number}`",
+      {
+        "language": "jsonnet",
+        "value": "local lib = import '../navigation/lib.libsonnet';"
+      }
+    ]
+  }
+}

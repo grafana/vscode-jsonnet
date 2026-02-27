@@ -1,0 +1,19 @@
+{
+  "diagnostics": [
+    {
+      "range": {
+        "start": {
+          "line": 0,
+          "character": 5
+        },
+        "end": {
+          "line": 0,
+          "character": 5
+        }
+      },
+      "severity": 1,
+      "source": "jrsonnet",
+      "message": "expected expression"
+    }
+  ]
+}

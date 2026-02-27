@@ -1,0 +1,19 @@
+{
+  "diagnostics": [
+    {
+      "range": {
+        "start": {
+          "line": 0,
+          "character": 8
+        },
+        "end": {
+          "line": 0,
+          "character": 26
+        }
+      },
+      "severity": 1,
+      "source": "jrsonnet-import",
+      "message": "unable to resolve import: helper.libsonnet"
+    }
+  ]
+}

@@ -10,9 +10,13 @@ export class JsonnetDebugAdapterDescriptorFactory implements vscode.DebugAdapter
   }
 
   createDebugAdapterDescriptor(
-    session: vscode.DebugSession,
+    _session: vscode.DebugSession,
     executable: vscode.DebugAdapterExecutable | undefined
   ): vscode.ProviderResult<vscode.DebugAdapterDescriptor> {
+    if (executable) {
+      return executable;
+    }
+
     return new vscode.DebugAdapterExecutable(this.binPath, ['-d', '-s']);
   }
 }

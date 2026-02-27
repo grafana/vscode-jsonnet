@@ -1,0 +1,15 @@
+{
+  "definition": {
+    "uri": "language/navigation/import_binding_definition.jsonnet",
+    "range": {
+      "start": {
+        "line": 0,
+        "character": 6
+      },
+      "end": {
+        "line": 0,
+        "character": 9
+      }
+    }
+  }
+}

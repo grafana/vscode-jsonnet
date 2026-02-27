@@ -1,0 +1,11 @@
+{
+  "hover": {
+    "contents": [
+      "`function(string | object | function() | array<any>): number`",
+      {
+        "language": "jsonnet",
+        "value": "std.length"
+      }
+    ]
+  }
+}
