@@ -211,10 +211,7 @@
         },
         "jsonnet.languageServer.resolvePathsWithTanka": {
           "scope": "resource",
-          "type": [
-            "string",
-            "boolean"
-          ],
+          "type": "string",
           "enum": [
             "false",
             "auto",

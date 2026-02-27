@@ -415,10 +415,26 @@ async function didChangeConfigHandler() {
 
 function getLanguageServerSettings() {
   const workspaceConfig = workspace.getConfiguration('jsonnet');
-  const workspaceRoot = workspace.workspaceFolders?.[0]?.uri.fsPath;
-  let jpath: string[] = workspaceConfig.get('languageServer.jpath', []);
-  if (workspaceRoot) {
-    jpath = jpath.map((p) => (path.isAbsolute(p) ? p : path.join(workspaceRoot, p)));
+  const workspaceRoots = workspace.workspaceFolders?.map((folder) => folder.uri.fsPath) ?? [];
+  const configuredJpath: string[] = workspaceConfig.get('languageServer.jpath', []);
+  const jpath: string[] = [];
+  const jpathSet = new Set<string>();
+  for (const p of configuredJpath) {
+    if (path.isAbsolute(p) || workspaceRoots.length === 0) {
+      if (!jpathSet.has(p)) {
+        jpathSet.add(p);
+        jpath.push(p);
+      }
+      continue;
+    }
+    for (const root of workspaceRoots) {
+      const resolved = path.join(root, p);
+      if (jpathSet.has(resolved)) {
+        continue;
+      }
+      jpathSet.add(resolved);
+      jpath.push(resolved);
+    }
   }
   const formatting: Record<string, unknown> = {};
   const formattingSettings = [
