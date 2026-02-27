@@ -12,7 +12,7 @@ import { LanguageClient } from 'vscode-languageclient/node';
 import { install } from './install';
 import { JsonnetDebugAdapterDescriptorFactory } from './debugger';
 import { JsonnetDebugConfigurationProvider } from './debugConfigurationProvider';
-import { createEvalCommand } from './evalCommand';
+import { createEvalCommand, registerEvalResultStore } from './evalCommand';
 import { createFindTransitiveImportersCommand } from './findTransitiveImporters';
 import { sendDidChangeConfiguration, startLanguageClient, stopLanguageClient } from './languageServer';
 
@@ -54,9 +54,11 @@ export async function activate(context: ExtensionContext): Promise<void> {
   );
 
   const getClient = () => client;
+  const resultStore = registerEvalResultStore(context);
   const evalCommandOptions = {
     channel,
     getClient,
+    resultStore,
   };
 
   context.subscriptions.push(
