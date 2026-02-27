@@ -16,13 +16,9 @@ export function createFindTransitiveImportersCommand(getClient: GetClient) {
       return;
     }
 
-    const result = await sendLspRequest(
-      getClient,
-      FindTransitiveImportersRequest,
-      {
-        textDocument: { uri: uri.toString() },
-      }
-    );
+    const result = await sendLspRequest(getClient, FindTransitiveImportersRequest, {
+      textDocument: { uri: uri.toString() },
+    });
 
     const importers = result?.transitiveImporters ?? [];
     if (importers.length === 0) {

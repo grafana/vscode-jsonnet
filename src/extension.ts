@@ -16,17 +16,11 @@ import { install } from './install';
 import { JsonnetDebugAdapterDescriptorFactory } from './debugger';
 import { createEvalCommand } from './evalCommand';
 import { createFindTransitiveImportersCommand } from './findTransitiveImporters';
-import {
-  sendDidChangeConfiguration,
-  startLanguageClient,
-  stopLanguageClient,
-} from './languageServer';
-
+import { sendDidChangeConfiguration, startLanguageClient, stopLanguageClient } from './languageServer';
 
 let extensionContext: ExtensionContext;
 let client: LanguageClient | undefined;
 let channel: OutputChannel;
-
 
 export async function activate(context: ExtensionContext): Promise<void> {
   channel = window.createOutputChannel('Jsonnet');
@@ -41,9 +35,7 @@ export async function activate(context: ExtensionContext): Promise<void> {
     debug.registerDebugConfigurationProvider(
       'jsonnet',
       {
-        provideDebugConfigurations(
-          folder: WorkspaceFolder | undefined
-        ): ProviderResult<DebugConfiguration[]> {
+        provideDebugConfigurations(folder: WorkspaceFolder | undefined): ProviderResult<DebugConfiguration[]> {
           return [
             {
               name: 'Debug current Jsonnet file',
@@ -83,40 +75,20 @@ export async function activate(context: ExtensionContext): Promise<void> {
   context.subscriptions.push(
     workspace.onDidChangeConfiguration(didChangeConfigHandler),
 
-    commands.registerCommand(
-      'jsonnet.restartLanguageServer',
-      restartLanguageServer
-    ),
+    commands.registerCommand('jsonnet.restartLanguageServer', restartLanguageServer),
 
-    commands.registerCommand(
-      'jsonnet.evalFile',
-      createEvalCommand(evalCommandOptions, false)
-    ),
-    commands.registerCommand(
-      'jsonnet.evalFileYaml',
-      createEvalCommand(evalCommandOptions, true)
-    ),
-    commands.registerCommand(
-      'jsonnet.evalExpression',
-      createEvalCommand(evalCommandOptions, false, true)
-    ),
-    commands.registerCommand(
-      'jsonnet.evalExpressionYaml',
-      createEvalCommand(evalCommandOptions, true, true)
-    ),
+    commands.registerCommand('jsonnet.evalFile', createEvalCommand(evalCommandOptions, false)),
+    commands.registerCommand('jsonnet.evalFileYaml', createEvalCommand(evalCommandOptions, true)),
+    commands.registerCommand('jsonnet.evalExpression', createEvalCommand(evalCommandOptions, false, true)),
+    commands.registerCommand('jsonnet.evalExpressionYaml', createEvalCommand(evalCommandOptions, true, true)),
 
-    commands.registerCommand(
-      'jsonnet.findTransitiveImporters',
-      createFindTransitiveImportersCommand(getClient)
-    )
+    commands.registerCommand('jsonnet.findTransitiveImporters', createFindTransitiveImportersCommand(getClient))
   );
 }
-
 
 export function deactivate(): Thenable<void> | undefined {
   return stopClient();
 }
-
 
 async function restartLanguageServer(): Promise<void> {
   await stopClient();
@@ -125,12 +97,10 @@ async function restartLanguageServer(): Promise<void> {
   await didChangeConfigHandler();
 }
 
-
 async function stopClient(): Promise<void> {
   await stopLanguageClient(client);
   client = undefined;
 }
-
 
 async function installDebugger(context: ExtensionContext): Promise<void> {
   const binPath = await install(extensionContext, channel, 'debugger');
@@ -138,12 +108,8 @@ async function installDebugger(context: ExtensionContext): Promise<void> {
     return;
   }
 
-  debug.registerDebugAdapterDescriptorFactory(
-    'jsonnet',
-    new JsonnetDebugAdapterDescriptorFactory(context, binPath)
-  );
+  debug.registerDebugAdapterDescriptorFactory('jsonnet', new JsonnetDebugAdapterDescriptorFactory(context, binPath));
 }
-
 
 async function didChangeConfigHandler() {
   await sendDidChangeConfiguration(client);

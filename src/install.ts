@@ -188,17 +188,11 @@ export async function install(
       matchingAsset?.browser_download_url ||
       `https://github.com/${releaseRepository}/releases/download/v${latestVersion}/${binaryName}_${latestVersion}_${platform}_${arch}${suffix}`;
     channel.appendLine(`Downloading ${url}`);
-    const downloadedAssetName =
-      matchingAsset?.name || path.basename(new URL(url).pathname);
+    const downloadedAssetName = matchingAsset?.name || path.basename(new URL(url).pathname);
 
     try {
       await download(url, binPath);
-      await verifySha256IfAvailable(
-        releaseData.assets ?? [],
-        downloadedAssetName,
-        binPath,
-        channel
-      );
+      await verifySha256IfAvailable(releaseData.assets ?? [], downloadedAssetName, binPath, channel);
       await fs.promises.chmod(binPath, 0o755);
     } catch (e) {
       const msg = `Failed to download ${url} to ${binPath}`;
@@ -328,49 +322,33 @@ async function verifySha256IfAvailable(
 ): Promise<void> {
   const checksumAsset = findChecksumAsset(assets, downloadedAssetName);
   if (!checksumAsset?.browser_download_url) {
-    channel.appendLine(
-      `No checksum asset found for ${downloadedAssetName}; skipping verification`
-    );
+    channel.appendLine(`No checksum asset found for ${downloadedAssetName}; skipping verification`);
     return;
   }
 
   const checksumFile = await githubApiRequest(checksumAsset.browser_download_url);
   const expected = parseSha256Checksum(checksumFile, downloadedAssetName);
   if (!expected) {
-    throw new Error(
-      `could not parse checksum for ${downloadedAssetName} from ${checksumAsset.name}`
-    );
+    throw new Error(`could not parse checksum for ${downloadedAssetName} from ${checksumAsset.name}`);
   }
 
   const actual = await sha256File(downloadedPath);
   if (actual.toLowerCase() !== expected.toLowerCase()) {
-    throw new Error(
-      `checksum mismatch for ${downloadedAssetName} ` +
-        `(expected ${expected}, got ${actual})`
-    );
+    throw new Error(`checksum mismatch for ${downloadedAssetName} ` + `(expected ${expected}, got ${actual})`);
   }
   channel.appendLine(`Verified sha256 checksum for ${downloadedAssetName}`);
 }
 
-function findChecksumAsset(
-  assets: ReleaseAsset[],
-  downloadedAssetName: string
-): ReleaseAsset | null {
+function findChecksumAsset(assets: ReleaseAsset[], downloadedAssetName: string): ReleaseAsset | null {
   const normalized = downloadedAssetName.toLowerCase();
-  const direct = assets.find(
-    (asset) => asset.name?.toLowerCase() === `${normalized}.sha256`
-  );
+  const direct = assets.find((asset) => asset.name?.toLowerCase() === `${normalized}.sha256`);
   if (direct) {
     return direct;
   }
   return (
     assets.find((asset) => {
       const name = asset.name?.toLowerCase();
-      return Boolean(
-        name &&
-          name.endsWith('.sha256') &&
-          name.includes(normalized)
-      );
+      return Boolean(name && name.endsWith('.sha256') && name.includes(normalized));
     }) || null
   );
 }
@@ -427,17 +405,12 @@ function githubApiRequest(
     const request = https
       .request(url, options, (res) => {
         if (
-          (res.statusCode === 301 ||
-            res.statusCode === 302 ||
-            res.statusCode === 307 ||
-            res.statusCode === 308) &&
+          (res.statusCode === 301 || res.statusCode === 302 || res.statusCode === 307 || res.statusCode === 308) &&
           res.headers.location
         ) {
           // follow redirects
           const redirected = new URL(res.headers.location, url).toString();
-          return resolve(
-            githubApiRequest(redirected, options, encoding, redirects + 1)
-          );
+          return resolve(githubApiRequest(redirected, options, encoding, redirects + 1));
         }
         if (res.statusCode !== 200) {
           return reject(res.statusMessage);
@@ -450,11 +423,8 @@ function githubApiRequest(
       })
       .on('error', reject);
     request.setTimeout(REQUEST_TIMEOUT_MS, () => {
-      request.destroy(
-        new Error(`request timed out after ${REQUEST_TIMEOUT_MS}ms`)
-      );
+      request.destroy(new Error(`request timed out after ${REQUEST_TIMEOUT_MS}ms`));
     });
-    request
-      .end();
+    request.end();
   });
 }

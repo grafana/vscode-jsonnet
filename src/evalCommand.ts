@@ -13,11 +13,7 @@ import {
 } from 'vscode';
 import { LanguageClient, RequestType } from 'vscode-languageclient/node';
 import { stringify as stringifyYaml } from 'yaml';
-import {
-  EvalExpressionRequest,
-  EvalFileRequest,
-  JsonValue,
-} from './lspRequests';
+import { EvalExpressionRequest, EvalFileRequest, JsonValue } from './lspRequests';
 
 const evalFileName = 'jsonnet-eval-result';
 
@@ -40,11 +36,7 @@ type EvalCommandOptions = {
   getClient: GetClient;
 };
 
-export function createEvalCommand(
-  options: EvalCommandOptions,
-  yaml: boolean,
-  promptExpr = false
-) {
+export function createEvalCommand(options: EvalCommandOptions, yaml: boolean, promptExpr = false) {
   return async () => {
     const editor = window.activeTextEditor;
     if (!editor) {
@@ -63,12 +55,7 @@ export function createEvalCommand(
 
     const currentFileUri = evalFileUri(editor);
     if (expr === '') {
-      await executeEvalRequest(
-        options,
-        EvalFileRequest,
-        { textDocument: { uri: currentFileUri } },
-        yaml
-      );
+      await executeEvalRequest(options, EvalFileRequest, { textDocument: { uri: currentFileUri } }, yaml);
     } else {
       await executeEvalRequest(
         options,
@@ -156,9 +143,7 @@ async function executeEvalRequest<P>(
     if (document.uri.fsPath !== uri.fsPath) {
       return;
     }
-    options.channel.appendLine(
-      `Closed result tab, stopping watcher and deleting temp output ${tempFile}`
-    );
+    options.channel.appendLine(`Closed result tab, stopping watcher and deleting temp output ${tempFile}`);
     void cleanup();
     closeDisposable.dispose();
   });
@@ -171,21 +156,10 @@ async function executeEvalRequest<P>(
       window.showErrorMessage('Language server is not running');
       return;
     }
-    void evalJsonnet(
-      options,
-      activeClient,
-      request,
-      params,
-      yaml,
-      tempFile,
-      display,
-      session
-    );
+    void evalJsonnet(options, activeClient, request, params, yaml, tempFile, display, session);
   };
 
-  const continuousEval = workspace
-    .getConfiguration('jsonnet')
-    .get('languageServer.continuousEval');
+  const continuousEval = workspace.getConfiguration('jsonnet').get('languageServer.continuousEval');
   if (continuousEval === false) {
     watcher.dispose();
     triggerEval(true);
@@ -222,20 +196,12 @@ async function evalJsonnet<P>(
   const cancellationSource = new CancellationTokenSource();
   session.inFlightRequest = cancellationSource;
   options.channel.appendLine(
-    `Sending ${request.method} request ${requestId}: ` +
-      `${JSON.stringify(params)} for ${tempFile}`
+    `Sending ${request.method} request ${requestId}: ` + `${JSON.stringify(params)} for ${tempFile}`
   );
 
   try {
-    const result: JsonValue = await client.sendRequest(
-      request,
-      params,
-      cancellationSource.token
-    );
-    if (
-      requestId !== session.latestRequestId ||
-      cancellationSource.token.isCancellationRequested
-    ) {
+    const result: JsonValue = await client.sendRequest(request, params, cancellationSource.token);
+    if (requestId !== session.latestRequestId || cancellationSource.token.isCancellationRequested) {
       return;
     }
     let uri = Uri.file(tempFile);
@@ -255,10 +221,7 @@ async function evalJsonnet<P>(
       });
     }
   } catch (err) {
-    if (
-      requestId !== session.latestRequestId ||
-      cancellationSource.token.isCancellationRequested
-    ) {
+    if (requestId !== session.latestRequestId || cancellationSource.token.isCancellationRequested) {
       return;
     }
     const message = err instanceof Error ? err.message : String(err);
