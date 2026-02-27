@@ -16,8 +16,8 @@ suite('Diagnostics', () => {
     });
   });
 
-  test('shows type errors as error diagnostics', async () => {
-    const relativePath = 'jsonnet/invalid_type.jsonnet';
+  test('shows syntax errors as error diagnostics', async () => {
+    const relativePath = 'jsonnet/syntax_error.jsonnet';
     const expectedDiagnostics = expectedDiagnosticsFor(relativePath);
     const document = await openScenarioDocument(relativePath);
 
@@ -31,8 +31,8 @@ suite('Diagnostics', () => {
     assert.deepStrictEqual(diagnostics, expectedDiagnostics);
   });
 
-  test('shows non-fatal issues as warning diagnostics', async () => {
-    const relativePath = 'jsonnet/deprecated_field.jsonnet';
+  test('shows lint warnings as warning diagnostics', async () => {
+    const relativePath = 'jsonnet/unused_variable.jsonnet';
     const expectedDiagnostics = expectedDiagnosticsFor(relativePath);
     const document = await openScenarioDocument(relativePath);
 

@@ -1,0 +1,19 @@
+{
+  "diagnostics": [
+    {
+      "range": {
+        "start": {
+          "line": 0,
+          "character": 6
+        },
+        "end": {
+          "line": 0,
+          "character": 7
+        }
+      },
+      "severity": 2,
+      "source": "jrsonnet-lint",
+      "message": "unused variable: `x`; prefix with `_` to silence this warning"
+    }
+  ]
+}
