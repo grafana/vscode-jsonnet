@@ -9,6 +9,7 @@ import {
   OutputChannel,
   TextEditor,
   ViewColumn,
+  CancellationTokenSource,
   ProviderResult,
   WorkspaceFolder,
   DebugConfiguration,
@@ -59,6 +60,12 @@ type FindTransitiveImportersParams = {
 type FindTransitiveImportersResponse = {
   file: string;
   transitiveImporters: string[];
+};
+
+type EvalSession = {
+  latestRequestId: number;
+  inFlightRequest: CancellationTokenSource | undefined;
+  debounceTimer: ReturnType<typeof setTimeout> | undefined;
 };
 
 const EvalFileRequest = new RequestType<EvalFileParams, JsonValue, void>('jrsonnet/evalFile');
@@ -178,20 +185,30 @@ async function executeEvalRequest<P>(
 
   const tempFile = createTmpFile(yaml);
   const uri = Uri.file(tempFile);
+  const session: EvalSession = {
+    latestRequestId: 0,
+    inFlightRequest: undefined,
+    debounceTimer: undefined,
+  };
 
   fs.writeFileSync(tempFile, '"Evaluating..."');
 
   if (workspace.getConfiguration('jsonnet').get('languageServer.continuousEval') === false) {
-    evalJsonnet(request, params, yaml, tempFile, true);
+    void evalJsonnet(request, params, yaml, tempFile, true, session);
   } else {
     // Initial eval
-    evalJsonnet(request, params, yaml, tempFile, true);
+    void evalJsonnet(request, params, yaml, tempFile, true, session);
 
     // Watch all jsonnet files, trigger eval on change
     const watcher = workspace.createFileSystemWatcher('**/*.*sonnet', true, false, true);
     watcher.onDidChange((e) => {
       channel.appendLine(`File changed: ${e.fsPath}, triggering eval`);
-      evalJsonnet(request, params, yaml, tempFile, false);
+      if (session.debounceTimer) {
+        clearTimeout(session.debounceTimer);
+      }
+      session.debounceTimer = setTimeout(() => {
+        void evalJsonnet(request, params, yaml, tempFile, false, session);
+      }, 200);
     });
 
     // Stop watching when the tab is closed. Only run this once.
@@ -203,52 +220,76 @@ async function executeEvalRequest<P>(
       }
       channel.appendLine(`Closed result tab, stopping watcher and deleting temp file ${tempFile}`);
       watcher.dispose();
+      if (session.debounceTimer) {
+        clearTimeout(session.debounceTimer);
+      }
+      session.inFlightRequest?.cancel();
+      session.inFlightRequest?.dispose();
       fs.unlinkSync(tempFile);
       disposable.dispose();
     });
   }
 }
 
-function evalJsonnet<P>(
+async function evalJsonnet<P>(
   request: RequestType<P, JsonValue, void>,
   params: P,
   yaml: boolean,
   tempFile: string,
-  display = false
-): void {
-  channel.appendLine(`Sending ${request.method} request: ${JSON.stringify(params)} for ${tempFile}`);
-  client
-    .sendRequest(request, params)
-    .then((result: JsonValue) => {
-      let uri = Uri.file(tempFile);
-      const serializedResult = JSON.stringify(result, null, 2);
-      fs.writeFileSync(tempFile, serializedResult);
+  display = false,
+  session: EvalSession
+): Promise<void> {
+  const requestId = session.latestRequestId + 1;
+  session.latestRequestId = requestId;
+  session.inFlightRequest?.cancel();
+  session.inFlightRequest?.dispose();
 
-      if (yaml) {
-        const yamlString = stringifyYaml(result);
-        uri = Uri.file(tempFile);
-        fs.writeFileSync(tempFile, yamlString);
-      }
-      if (display) {
-        window.showTextDocument(uri, {
-          preview: true,
-          viewColumn: ViewColumn.Beside,
-          preserveFocus: true,
-        });
-      }
-    })
-    .catch((err) => {
-      window.showErrorMessage(err.message);
-      fs.writeFileSync(tempFile, err.message);
-      if (display) {
-        const uri = Uri.file(tempFile);
-        window.showTextDocument(uri, {
-          preview: true,
-          viewColumn: ViewColumn.Beside,
-          preserveFocus: true,
-        });
-      }
-    });
+  const cancellationSource = new CancellationTokenSource();
+  session.inFlightRequest = cancellationSource;
+  channel.appendLine(`Sending ${request.method} request ${requestId}: ${JSON.stringify(params)} for ${tempFile}`);
+
+  try {
+    const result: JsonValue = await client.sendRequest(request, params, cancellationSource.token);
+    if (requestId !== session.latestRequestId || cancellationSource.token.isCancellationRequested) {
+      return;
+    }
+    let uri = Uri.file(tempFile);
+    const serializedResult = JSON.stringify(result, null, 2);
+    fs.writeFileSync(tempFile, serializedResult);
+
+    if (yaml) {
+      const yamlString = stringifyYaml(result);
+      uri = Uri.file(tempFile);
+      fs.writeFileSync(tempFile, yamlString);
+    }
+    if (display) {
+      window.showTextDocument(uri, {
+        preview: true,
+        viewColumn: ViewColumn.Beside,
+        preserveFocus: true,
+      });
+    }
+  } catch (err) {
+    if (requestId !== session.latestRequestId || cancellationSource.token.isCancellationRequested) {
+      return;
+    }
+    const message = err instanceof Error ? err.message : String(err);
+    window.showErrorMessage(message);
+    fs.writeFileSync(tempFile, message);
+    if (display) {
+      const uri = Uri.file(tempFile);
+      window.showTextDocument(uri, {
+        preview: true,
+        viewColumn: ViewColumn.Beside,
+        preserveFocus: true,
+      });
+    }
+  } finally {
+    cancellationSource.dispose();
+    if (session.inFlightRequest === cancellationSource) {
+      session.inFlightRequest = undefined;
+    }
+  }
 }
 
 function evalFileUri(editor: TextEditor): string {
