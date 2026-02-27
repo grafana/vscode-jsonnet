@@ -35,7 +35,7 @@ export async function activate(context: ExtensionContext): Promise<void> {
     debug.registerDebugConfigurationProvider(
       'jsonnet',
       {
-        provideDebugConfigurations(folder: WorkspaceFolder | undefined): ProviderResult<DebugConfiguration[]> {
+        provideDebugConfigurations(_folder: WorkspaceFolder | undefined): ProviderResult<DebugConfiguration[]> {
           return [
             {
               name: 'Debug current Jsonnet file',

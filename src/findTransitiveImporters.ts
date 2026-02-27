@@ -3,8 +3,6 @@ import { window, workspace, Uri } from 'vscode';
 import { LanguageClient, RequestType } from 'vscode-languageclient/node';
 import {
   FindTransitiveImportersRequest,
-  FindTransitiveImportersParams,
-  FindTransitiveImportersResponse,
 } from './lspRequests';
 
 type GetClient = () => LanguageClient | undefined;
