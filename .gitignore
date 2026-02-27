@@ -1,4 +1,5 @@
 node_modules/
 out/
+*.tsbuildinfo
 vscode-jsonnet-*.vsix
 .vscode
