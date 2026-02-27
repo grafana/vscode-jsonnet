@@ -6,14 +6,12 @@ import {
   ExtensionContext,
   Uri,
   OutputChannel,
-  ProviderResult,
-  WorkspaceFolder,
-  DebugConfiguration,
   DebugConfigurationProviderTriggerKind,
 } from 'vscode';
 import { LanguageClient } from 'vscode-languageclient/node';
 import { install } from './install';
 import { JsonnetDebugAdapterDescriptorFactory } from './debugger';
+import { JsonnetDebugConfigurationProvider } from './debugConfigurationProvider';
 import { createEvalCommand } from './evalCommand';
 import { createFindTransitiveImportersCommand } from './findTransitiveImporters';
 import { sendDidChangeConfiguration, startLanguageClient, stopLanguageClient } from './languageServer';
@@ -34,18 +32,7 @@ export async function activate(context: ExtensionContext): Promise<void> {
   context.subscriptions.push(
     debug.registerDebugConfigurationProvider(
       'jsonnet',
-      {
-        provideDebugConfigurations(_folder: WorkspaceFolder | undefined): ProviderResult<DebugConfiguration[]> {
-          return [
-            {
-              name: 'Debug current Jsonnet file',
-              request: 'launch',
-              type: 'jsonnet',
-              program: '${file}',
-            },
-          ];
-        },
-      },
+      new JsonnetDebugConfigurationProvider(),
       DebugConfigurationProviderTriggerKind.Dynamic
     ),
 
