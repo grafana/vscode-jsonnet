@@ -1,0 +1,17 @@
+{
+  "completion": {
+    "isIncomplete": false,
+    "items": [
+      {
+        "label": "first",
+        "kind": 5,
+        "detail": "number"
+      },
+      {
+        "label": "second",
+        "kind": 5,
+        "detail": "number"
+      }
+    ]
+  }
+}

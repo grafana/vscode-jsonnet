@@ -34,6 +34,18 @@ export type ScenarioExpected = {
   evalExpression?: ScenarioExpressionExpectations;
   diagnostics?: ScenarioDiagnostic[];
   findTransitiveImporters?: string[];
+  hover?: unknown;
+  definition?: unknown;
+  references?: unknown;
+  rename?: unknown;
+  prepareRename?: unknown;
+  completion?: unknown;
+  signatureHelp?: unknown;
+  inlayHints?: unknown;
+  formatting?: unknown;
+  codeActions?: unknown;
+  documentSymbols?: unknown;
+  [key: string]: unknown;
 };
 
 export async function ensureExtensionReady(): Promise<void> {
@@ -66,10 +78,6 @@ export function scenarioRoot(): string {
   const [folder] = vscode.workspace.workspaceFolders ?? [];
   assert.ok(folder, 'expected a test workspace folder');
   return folder.uri.fsPath;
-}
-
-export function isRealLspMode(): boolean {
-  return process.env.JSONNET_TEST_REAL_LSP === '1';
 }
 
 export function languageServerPathForTests(): string {

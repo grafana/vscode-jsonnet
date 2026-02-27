@@ -4,7 +4,6 @@ import { parse as parseYaml } from 'yaml';
 import {
   closeEvalEditors,
   configureJsonnetForTest,
-  isRealLspMode,
   openScenarioDocument,
   readScenarioExpected,
   waitForValue,
@@ -48,30 +47,20 @@ suite('Eval Commands', () => {
       const text = await readEvalResultText();
       const actual = tc.parseOutput(text);
 
-      if (isRealLspMode()) {
-        assert.ok(typeof actual === 'object' && actual !== null);
-        return;
-      }
-
       assert.deepStrictEqual(actual, expected.evalFile?.result);
     });
   }
 
   test('surfaces eval errors in the result tab', async () => {
-    const relativePath = 'eval/jsonnet/invalid_type.jsonnet';
+    const relativePath = 'eval/jsonnet/runtime_error.jsonnet';
     const expected = readScenarioExpected(relativePath);
 
     await openScenarioDocument(relativePath);
     await vscode.commands.executeCommand('jsonnet.evalFile');
 
     const text = await readEvalResultText();
-
-    if (isRealLspMode()) {
-      assert.notStrictEqual(text.trim(), '');
-      return;
-    }
-
-    assert.ok(text.includes(expected.evalFile?.error?.message || 'error'));
+    const actual = JSON.parse(text);
+    assert.deepStrictEqual(actual, expected.evalFile?.result);
   });
 });
 

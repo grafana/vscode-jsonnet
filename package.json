@@ -5,7 +5,7 @@
   "description": "Full code support (formatting, highlighting, navigation, debugging etc) for Jsonnet",
   "license": "Apache License Version 2.0",
   "publisher": "Grafana",
-  "version": "0.7.5-rtk5",
+  "version": "0.7.5-rtk6",
   "repository": {
     "type": "git",
     "url": "https://github.com/grafana/vscode-jsonnet"
@@ -504,7 +504,7 @@
     "watch": "tsc -b -w",
     "lint": "eslint ./src --ext .ts,.tsx",
     "test": "npm run compile && node --test test/**/*.test.js",
-    "test:integration": "npm run compile && vscode-test --label fake",
-    "test:integration:real": "npm run compile && vscode-test --label real"
+    "test:integration": "npm run compile && vscode-test --label fake --no-parallel",
+    "test:integration:real": "npm run compile && vscode-test --label real --no-parallel"
   }
 }

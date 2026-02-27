@@ -1,0 +1,26 @@
+{
+  "signatureHelp": {
+    "signatures": [
+      {
+        "label": "add(x, y)",
+        "parameters": [
+          {
+            "label": [
+              4,
+              5
+            ]
+          },
+          {
+            "label": [
+              7,
+              8
+            ]
+          }
+        ],
+        "activeParameter": 0
+      }
+    ],
+    "activeSignature": 0,
+    "activeParameter": 0
+  }
+}

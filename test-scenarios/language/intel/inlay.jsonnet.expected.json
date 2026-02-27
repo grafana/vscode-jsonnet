@@ -1,0 +1,22 @@
+{
+  "inlayHints": [
+    {
+      "position": {
+        "line": 0,
+        "character": 9
+      },
+      "label": " -> number",
+      "kind": 1,
+      "paddingLeft": true
+    },
+    {
+      "position": {
+        "line": 1,
+        "character": 12
+      },
+      "label": ": number",
+      "kind": 1,
+      "paddingLeft": true
+    }
+  ]
+}

@@ -100,7 +100,35 @@ function handleRequest(message) {
   if (method === 'initialize') {
     sendResult(id, {
       capabilities: {
-        textDocumentSync: 1,
+        textDocumentSync: {
+          openClose: true,
+          change: 2,
+          save: true,
+        },
+        hoverProvider: true,
+        completionProvider: {
+          triggerCharacters: ['.'],
+        },
+        signatureHelpProvider: {
+          triggerCharacters: ['(', ','],
+        },
+        definitionProvider: true,
+        typeDefinitionProvider: true,
+        implementationProvider: true,
+        referencesProvider: true,
+        documentHighlightProvider: true,
+        documentSymbolProvider: true,
+        codeActionProvider: {
+          codeActionKinds: ['quickfix', 'source.fixAll'],
+          resolveProvider: false,
+        },
+        documentFormattingProvider: true,
+        documentRangeFormattingProvider: true,
+        renameProvider: {
+          prepareProvider: true,
+        },
+        declarationProvider: true,
+        inlayHintProvider: true,
       },
       serverInfo: {
         name: 'fake-jrsonnet-lsp',
@@ -131,6 +159,11 @@ function handleRequest(message) {
 
   if (method === 'jrsonnet/findTransitiveImporters') {
     handleFindImportersRequest(id, message.params?.textDocument?.uri);
+    return;
+  }
+
+  if (method.startsWith('textDocument/')) {
+    handleFeatureRequest(id, method, message.params);
     return;
   }
 
@@ -197,6 +230,27 @@ function handleFindImportersRequest(id, uri) {
   });
 }
 
+function handleFeatureRequest(id, method, params) {
+  const uri = params?.textDocument?.uri;
+  const fsPath = toFsPath(uri);
+  const root = findScenarioRoot(fsPath);
+  const expected = loadExpectedFromUri(uri);
+  const expectedKey = expectedKeyForMethod(method);
+
+  if (!expectedKey) {
+    sendResult(id, null);
+    return;
+  }
+
+  const result = expected[expectedKey];
+  if (result === undefined) {
+    sendResult(id, defaultResultForMethod(method));
+    return;
+  }
+
+  sendResult(id, absolutizeUris(root, result));
+}
+
 function handleNotification(method, params) {
   if (method === 'exit') {
     process.exit(0);
@@ -223,8 +277,9 @@ function handleNotification(method, params) {
 
 function publishDiagnostics(uri) {
   const expected = loadExpectedFromUri(uri);
+  const root = findScenarioRoot(toFsPath(uri));
   const diagnostics = Array.isArray(expected.diagnostics)
-    ? expected.diagnostics
+    ? absolutizeUris(root, expected.diagnostics)
     : [];
 
   sendNotification('textDocument/publishDiagnostics', {
@@ -316,6 +371,118 @@ function scenarioRelativePath(uri) {
   }
 
   return path.relative(root, fsPath).split(path.sep).join('/');
+}
+
+function expectedKeyForMethod(method) {
+  switch (method) {
+    case 'textDocument/hover':
+      return 'hover';
+    case 'textDocument/definition':
+      return 'definition';
+    case 'textDocument/typeDefinition':
+      return 'typeDefinition';
+    case 'textDocument/declaration':
+      return 'declaration';
+    case 'textDocument/implementation':
+      return 'implementation';
+    case 'textDocument/references':
+      return 'references';
+    case 'textDocument/documentHighlight':
+      return 'documentHighlights';
+    case 'textDocument/rename':
+      return 'rename';
+    case 'textDocument/prepareRename':
+      return 'prepareRename';
+    case 'textDocument/completion':
+      return 'completion';
+    case 'textDocument/signatureHelp':
+      return 'signatureHelp';
+    case 'textDocument/inlayHint':
+      return 'inlayHints';
+    case 'textDocument/formatting':
+      return 'formatting';
+    case 'textDocument/codeAction':
+      return 'codeActions';
+    case 'textDocument/documentSymbol':
+      return 'documentSymbols';
+    default:
+      return undefined;
+  }
+}
+
+function defaultResultForMethod(method) {
+  switch (method) {
+    case 'textDocument/references':
+    case 'textDocument/documentHighlight':
+    case 'textDocument/inlayHint':
+    case 'textDocument/formatting':
+    case 'textDocument/codeAction':
+    case 'textDocument/documentSymbol':
+      return [];
+    case 'textDocument/completion':
+      return {
+        isIncomplete: false,
+        items: [],
+      };
+    default:
+      return null;
+  }
+}
+
+function absolutizeUris(root, value) {
+  if (Array.isArray(value)) {
+    return value.map((item) => absolutizeUris(root, item));
+  }
+
+  if (!value || typeof value !== 'object') {
+    return value;
+  }
+
+  const output = {};
+
+  for (const [key, child] of Object.entries(value)) {
+    if (key === 'uri' && typeof child === 'string') {
+      output[key] = absolutizeUri(root, child);
+      continue;
+    }
+
+    if (key === 'changes' && child && typeof child === 'object') {
+      output[key] = absolutizeChangeMap(root, child);
+      continue;
+    }
+
+    output[key] = absolutizeUris(root, child);
+  }
+
+  return output;
+}
+
+function absolutizeChangeMap(root, value) {
+  const output = {};
+
+  for (const [uri, edits] of Object.entries(value)) {
+    output[absolutizeUri(root, uri)] = absolutizeUris(root, edits);
+  }
+
+  return output;
+}
+
+function absolutizeUri(root, uri) {
+  if (uri.startsWith('file://')) {
+    return uri;
+  }
+
+  const fsPath = path.isAbsolute(uri)
+    ? uri
+    : root
+      ? path.join(root, uri)
+      : uri;
+
+  if (!path.isAbsolute(fsPath)) {
+    return uri;
+  }
+
+  return pathToFileURL(fsPath).toString();
 }
 
 function findScenarioRoot(fsPath) {

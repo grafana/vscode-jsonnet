@@ -1,11 +1,8 @@
 {
   "evalFile": {
     "result": {
-      "source": "jsonnet/ok.jsonnet",
-      "value": {
-        "greeting": "hello",
-        "target": "world"
-      }
+      "greeting": "hello",
+      "target": "world"
     }
   }
 }

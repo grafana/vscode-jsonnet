@@ -1,0 +1,19 @@
+{
+  "diagnostics": [
+    {
+      "range": {
+        "start": {
+          "line": 0,
+          "character": 11
+        },
+        "end": {
+          "line": 0,
+          "character": 12
+        }
+      },
+      "severity": 2,
+      "source": "jrsonnet-lint",
+      "message": "`std.length` argument 1 (`x`) expects `string | object | function() | array<any>`, got `number`"
+    }
+  ]
+}

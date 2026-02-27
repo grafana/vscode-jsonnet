@@ -1,12 +1,13 @@
 import * as assert from 'assert';
-import { isDeepStrictEqual } from 'util';
-import * as vscode from 'vscode';
 import {
   configureJsonnetForTest,
   openScenarioDocument,
-  readScenarioExpected,
-  waitForValue,
 } from './testHarness';
+import { ComparableDiagnostic } from './diagnosticUtils';
+import {
+  expectedDiagnosticsFor,
+  waitForDiagnostics,
+} from './diagnosticsTestUtils';
 
 suite('Diagnostics', () => {
   const diagnosticsCases: DiagnosticsCase[] = [
@@ -17,6 +18,14 @@ suite('Diagnostics', () => {
     {
       name: 'shows lint warnings as warning diagnostics',
       relativePath: 'diagnostics/jsonnet/unused_variable.jsonnet',
+    },
+    {
+      name: 'shows stdlib type mismatch diagnostics',
+      relativePath: 'language/diagnostics/type_stdlib_mismatch.jsonnet',
+    },
+    {
+      name: 'shows local function runtime type diagnostics',
+      relativePath: 'language/diagnostics/type_local_runtime_error.jsonnet',
     },
   ];
 
@@ -30,18 +39,13 @@ suite('Diagnostics', () => {
 
   for (const tc of diagnosticsCases) {
     test(tc.name, async () => {
-      const expectedDiagnostics = expectedDiagnosticsFor(tc.relativePath);
+      const expectedDiagnostics = scenarioExpectedDiagnosticsFor(tc.relativePath);
       const document = await openScenarioDocument(tc.relativePath);
 
-      const diagnostics = await waitForValue(() => {
-        const current = comparableDiagnostics(
-          vscode.languages.getDiagnostics(document.uri)
-        );
-        if (!isDeepStrictEqual(current, expectedDiagnostics)) {
-          return undefined;
-        }
-        return current;
-      });
+      const diagnostics = await waitForDiagnostics(
+        document.uri,
+        expectedDiagnostics
+      );
 
       assert.deepStrictEqual(diagnostics, expectedDiagnostics);
     });
@@ -53,64 +57,6 @@ type DiagnosticsCase = {
   relativePath: string;
 };
 
-type ComparableDiagnostic = {
-  range: {
-    start: {
-      line: number;
-      character: number;
-    };
-    end: {
-      line: number;
-      character: number;
-    };
-  };
-  severity: number;
-  source?: string;
-  message: string;
-};
-
-function expectedDiagnosticsFor(relativePath: string): ComparableDiagnostic[] {
-  const expected = readScenarioExpected(relativePath);
-
-  return (expected.diagnostics ?? []).map((diagnostic) => ({
-    range: diagnostic.range,
-    severity: diagnostic.severity,
-    source: diagnostic.source,
-    message: diagnostic.message,
-  }));
-}
-
-function comparableDiagnostics(
-  diagnostics: readonly vscode.Diagnostic[]
-): ComparableDiagnostic[] {
-  return diagnostics.map((diagnostic) => ({
-    range: {
-      start: {
-        line: diagnostic.range.start.line,
-        character: diagnostic.range.start.character,
-      },
-      end: {
-        line: diagnostic.range.end.line,
-        character: diagnostic.range.end.character,
-      },
-    },
-    severity: toLspSeverity(diagnostic.severity),
-    source: diagnostic.source,
-    message: diagnostic.message,
-  }));
-}
-
-function toLspSeverity(severity: vscode.DiagnosticSeverity): number {
-  switch (severity) {
-    case vscode.DiagnosticSeverity.Error:
-      return 1;
-    case vscode.DiagnosticSeverity.Warning:
-      return 2;
-    case vscode.DiagnosticSeverity.Information:
-      return 3;
-    case vscode.DiagnosticSeverity.Hint:
-      return 4;
-    default:
-      return 1;
-  }
+function scenarioExpectedDiagnosticsFor(relativePath: string): ComparableDiagnostic[] {
+  return expectedDiagnosticsFor(relativePath);
 }
