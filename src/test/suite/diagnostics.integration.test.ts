@@ -2,73 +2,105 @@ import * as assert from 'assert';
 import * as vscode from 'vscode';
 import {
   ensureExtensionReady,
-  isRealLspMode,
   openScenarioDocument,
   readScenarioExpected,
   waitForValue,
 } from './testHarness';
 
 suite('Diagnostics', () => {
-  suiteSetup(async function () {
+  suiteSetup(async () => {
     await ensureExtensionReady();
-
-    if (isRealLspMode()) {
-      this.skip();
-    }
   });
 
   test('shows type errors as error diagnostics', async () => {
     const relativePath = 'jsonnet/invalid_type.jsonnet';
-    const expected = readScenarioExpected(relativePath);
-    const firstExpected = expected.diagnostics?.[0];
+    const expectedDiagnostics = expectedDiagnosticsFor(relativePath);
     const document = await openScenarioDocument(relativePath);
 
     const diagnostics = await waitForValue(() => {
-      const current = vscode.languages.getDiagnostics(document.uri);
-      return current.length > 0 ? current : undefined;
+      const current = comparableDiagnostics(
+        vscode.languages.getDiagnostics(document.uri)
+      );
+      return current.length === expectedDiagnostics.length ? current : undefined;
     });
 
-    assert.strictEqual(
-      diagnostics[0].severity,
-      toVscodeSeverity(firstExpected?.severity)
-    );
-    assert.ok(
-      diagnostics[0].message.includes(firstExpected?.message || 'Type mismatch')
-    );
+    assert.deepStrictEqual(diagnostics, expectedDiagnostics);
   });
 
   test('shows non-fatal issues as warning diagnostics', async () => {
     const relativePath = 'jsonnet/deprecated_field.jsonnet';
-    const expected = readScenarioExpected(relativePath);
-    const firstExpected = expected.diagnostics?.[0];
+    const expectedDiagnostics = expectedDiagnosticsFor(relativePath);
     const document = await openScenarioDocument(relativePath);
 
     const diagnostics = await waitForValue(() => {
-      const current = vscode.languages.getDiagnostics(document.uri);
-      return current.length > 0 ? current : undefined;
+      const current = comparableDiagnostics(
+        vscode.languages.getDiagnostics(document.uri)
+      );
+      return current.length === expectedDiagnostics.length ? current : undefined;
     });
 
-    assert.strictEqual(
-      diagnostics[0].severity,
-      toVscodeSeverity(firstExpected?.severity)
-    );
-    assert.ok(
-      diagnostics[0].message.includes(firstExpected?.message || 'Deprecated')
-    );
+    assert.deepStrictEqual(diagnostics, expectedDiagnostics);
   });
 });
 
-function toVscodeSeverity(value: number | undefined): vscode.DiagnosticSeverity {
-  switch (value) {
-    case 1:
-      return vscode.DiagnosticSeverity.Error;
-    case 2:
-      return vscode.DiagnosticSeverity.Warning;
-    case 3:
-      return vscode.DiagnosticSeverity.Information;
-    case 4:
-      return vscode.DiagnosticSeverity.Hint;
+type ComparableDiagnostic = {
+  range: {
+    start: {
+      line: number;
+      character: number;
+    };
+    end: {
+      line: number;
+      character: number;
+    };
+  };
+  severity: number;
+  source?: string;
+  message: string;
+};
+
+function expectedDiagnosticsFor(relativePath: string): ComparableDiagnostic[] {
+  const expected = readScenarioExpected(relativePath);
+
+  return (expected.diagnostics ?? []).map((diagnostic) => ({
+    range: diagnostic.range,
+    severity: diagnostic.severity,
+    source: diagnostic.source,
+    message: diagnostic.message,
+  }));
+}
+
+function comparableDiagnostics(
+  diagnostics: readonly vscode.Diagnostic[]
+): ComparableDiagnostic[] {
+  return diagnostics.map((diagnostic) => ({
+    range: {
+      start: {
+        line: diagnostic.range.start.line,
+        character: diagnostic.range.start.character,
+      },
+      end: {
+        line: diagnostic.range.end.line,
+        character: diagnostic.range.end.character,
+      },
+    },
+    severity: toLspSeverity(diagnostic.severity),
+    source: diagnostic.source,
+    message: diagnostic.message,
+  }));
+}
+
+function toLspSeverity(severity: vscode.DiagnosticSeverity): number {
+  switch (severity) {
+    case vscode.DiagnosticSeverity.Error:
+      return 1;
+    case vscode.DiagnosticSeverity.Warning:
+      return 2;
+    case vscode.DiagnosticSeverity.Information:
+      return 3;
+    case vscode.DiagnosticSeverity.Hint:
+      return 4;
     default:
-      return vscode.DiagnosticSeverity.Error;
+      return 1;
   }
 }

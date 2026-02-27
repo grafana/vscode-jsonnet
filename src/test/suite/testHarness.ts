@@ -15,13 +15,26 @@ type ScenarioEvalResult = {
 
 type ScenarioExpressionExpectations = Record<string, ScenarioEvalResult>;
 
+type ScenarioDiagnostic = {
+  range: {
+    start: {
+      line: number;
+      character: number;
+    };
+    end: {
+      line: number;
+      character: number;
+    };
+  };
+  severity: number;
+  source?: string;
+  message: string;
+};
+
 export type ScenarioExpected = {
   evalFile?: ScenarioEvalResult;
   evalExpression?: ScenarioExpressionExpectations;
-  diagnostics?: Array<{
-    severity?: number;
-    message?: string;
-  }>;
+  diagnostics?: ScenarioDiagnostic[];
   findTransitiveImporters?: string[];
 };
 
@@ -68,7 +81,7 @@ export async function ensureExtensionReady(): Promise<void> {
 }
 
 export function scenarioRoot(): string {
-  const folder = vscode.workspace.workspaceFolders?.[0];
+  const [folder] = vscode.workspace.workspaceFolders ?? [];
   assert.ok(folder, 'expected a test workspace folder');
   return folder.uri.fsPath;
 }
