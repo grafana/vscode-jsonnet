@@ -11,6 +11,21 @@ import {
 } from './testHarness';
 
 suite('Eval Commands', () => {
+  const evalFileCases: EvalFileCase[] = [
+    {
+      name: 'evaluates a file as JSON',
+      relativePath: 'eval/jsonnet/ok.jsonnet',
+      command: 'jsonnet.evalFile',
+      parseOutput: JSON.parse,
+    },
+    {
+      name: 'evaluates a file as YAML',
+      relativePath: 'eval/tanka/environments/default/main.jsonnet',
+      command: 'jsonnet.evalFileYaml',
+      parseOutput: parseYaml,
+    },
+  ];
+
   setup(async () => {
     await configureJsonnetForTest({
       'languageServer.continuousEval': false,
@@ -23,67 +38,24 @@ suite('Eval Commands', () => {
     await closeEvalEditors();
   });
 
-  test('evaluates a file as JSON', async () => {
-    const relativePath = 'eval/jsonnet/ok.jsonnet';
-    const expected = readScenarioExpected(relativePath);
+  for (const tc of evalFileCases) {
+    test(tc.name, async () => {
+      const expected = readScenarioExpected(tc.relativePath);
 
-    await openScenarioDocument(relativePath);
-    await vscode.commands.executeCommand('jsonnet.evalFile');
+      await openScenarioDocument(tc.relativePath);
+      await vscode.commands.executeCommand(tc.command);
 
-    const editor = await waitForValue(() => {
-      return vscode.window.visibleTextEditors.find(
-        (item) => item.document.uri.scheme === 'jsonnet-eval'
-      );
-    });
+      const text = await readEvalResultText();
+      const actual = tc.parseOutput(text);
 
-    const text = await waitForValue(() => {
-      const value = editor.document.getText();
-      if (value.trim() === '"Evaluating..."') {
-        return undefined;
+      if (isRealLspMode()) {
+        assert.ok(typeof actual === 'object' && actual !== null);
+        return;
       }
-      return value;
+
+      assert.deepStrictEqual(actual, expected.evalFile?.result);
     });
-
-    const actual = JSON.parse(text);
-
-    if (isRealLspMode()) {
-      assert.ok(typeof actual === 'object' && actual !== null);
-      return;
-    }
-
-    assert.deepStrictEqual(actual, expected.evalFile?.result);
-  });
-
-  test('evaluates a file as YAML', async () => {
-    const relativePath = 'eval/tanka/environments/default/main.jsonnet';
-    const expected = readScenarioExpected(relativePath);
-
-    await openScenarioDocument(relativePath);
-    await vscode.commands.executeCommand('jsonnet.evalFileYaml');
-
-    const editor = await waitForValue(() => {
-      return vscode.window.visibleTextEditors.find(
-        (item) => item.document.uri.scheme === 'jsonnet-eval'
-      );
-    });
-
-    const text = await waitForValue(() => {
-      const value = editor.document.getText();
-      if (value.trim() === '"Evaluating..."') {
-        return undefined;
-      }
-      return value;
-    });
-
-    const actual = parseYaml(text);
-
-    if (isRealLspMode()) {
-      assert.ok(typeof actual === 'object' && actual !== null);
-      return;
-    }
-
-    assert.deepStrictEqual(actual, expected.evalFile?.result);
-  });
+  }
 
   test('surfaces eval errors in the result tab', async () => {
     const relativePath = 'eval/jsonnet/invalid_type.jsonnet';
@@ -92,19 +64,7 @@ suite('Eval Commands', () => {
     await openScenarioDocument(relativePath);
     await vscode.commands.executeCommand('jsonnet.evalFile');
 
-    const editor = await waitForValue(() => {
-      return vscode.window.visibleTextEditors.find(
-        (item) => item.document.uri.scheme === 'jsonnet-eval'
-      );
-    });
-
-    const text = await waitForValue(() => {
-      const value = editor.document.getText();
-      if (value.includes('Evaluating')) {
-        return undefined;
-      }
-      return value;
-    });
+    const text = await readEvalResultText();
 
     if (isRealLspMode()) {
       assert.notStrictEqual(text.trim(), '');
@@ -114,3 +74,26 @@ suite('Eval Commands', () => {
     assert.ok(text.includes(expected.evalFile?.error?.message || 'error'));
   });
 });
+
+type EvalFileCase = {
+  name: string;
+  relativePath: string;
+  command: 'jsonnet.evalFile' | 'jsonnet.evalFileYaml';
+  parseOutput: (text: string) => unknown;
+};
+
+async function readEvalResultText(): Promise<string> {
+  const editor = await waitForValue(() => {
+    return vscode.window.visibleTextEditors.find(
+      (item) => item.document.uri.scheme === 'jsonnet-eval'
+    );
+  });
+
+  return waitForValue(() => {
+    const value = editor.document.getText();
+    if (value.includes('Evaluating')) {
+      return undefined;
+    }
+    return value;
+  });
+}

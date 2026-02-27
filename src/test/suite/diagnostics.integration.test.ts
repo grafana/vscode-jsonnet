@@ -1,4 +1,5 @@
 import * as assert from 'assert';
+import { isDeepStrictEqual } from 'util';
 import * as vscode from 'vscode';
 import {
   configureJsonnetForTest,
@@ -8,6 +9,17 @@ import {
 } from './testHarness';
 
 suite('Diagnostics', () => {
+  const diagnosticsCases: DiagnosticsCase[] = [
+    {
+      name: 'shows syntax errors as error diagnostics',
+      relativePath: 'diagnostics/jsonnet/syntax_error.jsonnet',
+    },
+    {
+      name: 'shows lint warnings as warning diagnostics',
+      relativePath: 'diagnostics/jsonnet/unused_variable.jsonnet',
+    },
+  ];
+
   setup(async () => {
     await configureJsonnetForTest({
       'languageServer.continuousEval': false,
@@ -16,36 +28,30 @@ suite('Diagnostics', () => {
     });
   });
 
-  test('shows syntax errors as error diagnostics', async () => {
-    const relativePath = 'diagnostics/jsonnet/syntax_error.jsonnet';
-    const expectedDiagnostics = expectedDiagnosticsFor(relativePath);
-    const document = await openScenarioDocument(relativePath);
+  for (const tc of diagnosticsCases) {
+    test(tc.name, async () => {
+      const expectedDiagnostics = expectedDiagnosticsFor(tc.relativePath);
+      const document = await openScenarioDocument(tc.relativePath);
 
-    const diagnostics = await waitForValue(() => {
-      const current = comparableDiagnostics(
-        vscode.languages.getDiagnostics(document.uri)
-      );
-      return current.length === expectedDiagnostics.length ? current : undefined;
+      const diagnostics = await waitForValue(() => {
+        const current = comparableDiagnostics(
+          vscode.languages.getDiagnostics(document.uri)
+        );
+        if (!isDeepStrictEqual(current, expectedDiagnostics)) {
+          return undefined;
+        }
+        return current;
+      });
+
+      assert.deepStrictEqual(diagnostics, expectedDiagnostics);
     });
-
-    assert.deepStrictEqual(diagnostics, expectedDiagnostics);
-  });
-
-  test('shows lint warnings as warning diagnostics', async () => {
-    const relativePath = 'diagnostics/jsonnet/unused_variable.jsonnet';
-    const expectedDiagnostics = expectedDiagnosticsFor(relativePath);
-    const document = await openScenarioDocument(relativePath);
-
-    const diagnostics = await waitForValue(() => {
-      const current = comparableDiagnostics(
-        vscode.languages.getDiagnostics(document.uri)
-      );
-      return current.length === expectedDiagnostics.length ? current : undefined;
-    });
-
-    assert.deepStrictEqual(diagnostics, expectedDiagnostics);
-  });
+  }
 });
+
+type DiagnosticsCase = {
+  name: string;
+  relativePath: string;
+};
 
 type ComparableDiagnostic = {
   range: {
