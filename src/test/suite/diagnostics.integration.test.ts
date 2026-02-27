@@ -17,7 +17,7 @@ suite('Diagnostics', () => {
   });
 
   test('shows syntax errors as error diagnostics', async () => {
-    const relativePath = 'jsonnet/syntax_error.jsonnet';
+    const relativePath = 'diagnostics/jsonnet/syntax_error.jsonnet';
     const expectedDiagnostics = expectedDiagnosticsFor(relativePath);
     const document = await openScenarioDocument(relativePath);
 
@@ -32,7 +32,7 @@ suite('Diagnostics', () => {
   });
 
   test('shows lint warnings as warning diagnostics', async () => {
-    const relativePath = 'jsonnet/unused_variable.jsonnet';
+    const relativePath = 'diagnostics/jsonnet/unused_variable.jsonnet';
     const expectedDiagnostics = expectedDiagnosticsFor(relativePath);
     const document = await openScenarioDocument(relativePath);
 

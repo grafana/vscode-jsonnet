@@ -310,15 +310,12 @@ function scenarioRelativePath(uri) {
     return '';
   }
 
-  const normalized = path.normalize(fsPath);
-  const parts = normalized.split(path.sep);
-  const scenariosIndex = parts.lastIndexOf('test-scenarios');
-
-  if (scenariosIndex === -1 || scenariosIndex + 2 >= parts.length) {
-    return path.basename(normalized);
+  const root = findScenarioRoot(fsPath);
+  if (!root) {
+    return path.basename(path.normalize(fsPath));
   }
 
-  return parts.slice(scenariosIndex + 2).join('/');
+  return path.relative(root, fsPath).split(path.sep).join('/');
 }
 
 function findScenarioRoot(fsPath) {
@@ -328,11 +325,17 @@ function findScenarioRoot(fsPath) {
 
   let current = path.resolve(fsPath);
 
+  if (fs.existsSync(current) && !fs.statSync(current).isDirectory()) {
+    current = path.dirname(current);
+  }
+
   while (current !== path.dirname(current)) {
-    if (
-      path.basename(current) === 'basic' &&
-      path.basename(path.dirname(current)) === 'test-scenarios'
-    ) {
+    const fakeServerScriptPath = path.join(
+      current,
+      '.tools',
+      'fake-jrsonnet-lsp.js'
+    );
+    if (fs.existsSync(fakeServerScriptPath)) {
       return current;
     }
 

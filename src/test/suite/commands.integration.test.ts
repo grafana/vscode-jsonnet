@@ -15,7 +15,7 @@ suite('Extension Commands', () => {
   });
 
   test('registers Jsonnet commands after activation', async () => {
-    await openScenarioDocument('jsonnet/ok.jsonnet');
+    await openScenarioDocument('commands/jsonnet/ok.jsonnet');
 
     const commands = await vscode.commands.getCommands(true);
 

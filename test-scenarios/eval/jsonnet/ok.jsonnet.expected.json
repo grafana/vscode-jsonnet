@@ -1,0 +1,11 @@
+{
+  "evalFile": {
+    "result": {
+      "source": "jsonnet/ok.jsonnet",
+      "value": {
+        "greeting": "hello",
+        "target": "world"
+      }
+    }
+  }
+}

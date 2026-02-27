@@ -24,7 +24,7 @@ suite('Eval Commands', () => {
   });
 
   test('evaluates a file as JSON', async () => {
-    const relativePath = 'jsonnet/ok.jsonnet';
+    const relativePath = 'eval/jsonnet/ok.jsonnet';
     const expected = readScenarioExpected(relativePath);
 
     await openScenarioDocument(relativePath);
@@ -55,7 +55,7 @@ suite('Eval Commands', () => {
   });
 
   test('evaluates a file as YAML', async () => {
-    const relativePath = 'tanka/environments/default/main.jsonnet';
+    const relativePath = 'eval/tanka/environments/default/main.jsonnet';
     const expected = readScenarioExpected(relativePath);
 
     await openScenarioDocument(relativePath);
@@ -86,7 +86,7 @@ suite('Eval Commands', () => {
   });
 
   test('surfaces eval errors in the result tab', async () => {
-    const relativePath = 'jsonnet/invalid_type.jsonnet';
+    const relativePath = 'eval/jsonnet/invalid_type.jsonnet';
     const expected = readScenarioExpected(relativePath);
 
     await openScenarioDocument(relativePath);

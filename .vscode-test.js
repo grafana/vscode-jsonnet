@@ -3,7 +3,7 @@ const { defineConfig } = require('@vscode/test-cli');
 
 const common = {
   files: 'out/test/**/*.integration.test.js',
-  workspaceFolder: path.resolve(__dirname, 'test-scenarios/basic'),
+  workspaceFolder: path.resolve(__dirname, 'test-scenarios'),
   launchArgs: ['--disable-extensions'],
   mocha: {
     timeout: 30000,
