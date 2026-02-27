@@ -68,6 +68,12 @@ type EvalSession = {
   debounceTimer: ReturnType<typeof setTimeout> | undefined;
 };
 
+type TempEvalOutput = {
+  tempDir: string;
+  tempFile: string;
+  uri: Uri;
+};
+
 const EvalFileRequest = new RequestType<EvalFileParams, JsonValue, void>('jrsonnet/evalFile');
 const EvalExpressionRequest = new RequestType<EvalExpressionParams, JsonValue, void>('jrsonnet/evalExpression');
 const FindTransitiveImportersRequest = new RequestType<
@@ -162,11 +168,15 @@ function evalCommand(yaml: boolean, promptExpr = false) {
   };
 }
 
-function createTmpFile(yaml: boolean): string {
+function createTmpFile(yaml: boolean): TempEvalOutput {
   const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'jsonnet-eval'));
   const fileEnding = yaml ? 'yaml' : 'json';
   const tempFile = path.join(tempDir, `${evalFileName}.${fileEnding}`);
-  return tempFile;
+  return {
+    tempDir,
+    tempFile,
+    uri: Uri.file(tempFile),
+  };
 }
 
 async function executeEvalRequest<P>(
@@ -183,24 +193,62 @@ async function executeEvalRequest<P>(
     }
   }
 
-  const tempFile = createTmpFile(yaml);
-  const uri = Uri.file(tempFile);
+  const tempOutput = createTmpFile(yaml);
+  const tempFile = tempOutput.tempFile;
+  const uri = tempOutput.uri;
   const session: EvalSession = {
     latestRequestId: 0,
     inFlightRequest: undefined,
     debounceTimer: undefined,
   };
+  const watcher = workspace.createFileSystemWatcher('**/*.*sonnet', true, false, true);
+  let cleanedUp = false;
+
+  const cleanup = () => {
+    if (cleanedUp) {
+      return;
+    }
+    cleanedUp = true;
+    watcher.dispose();
+    if (session.debounceTimer) {
+      clearTimeout(session.debounceTimer);
+      session.debounceTimer = undefined;
+    }
+    session.inFlightRequest?.cancel();
+    session.inFlightRequest?.dispose();
+    session.inFlightRequest = undefined;
+    try {
+      if (fs.existsSync(tempOutput.tempFile)) {
+        fs.unlinkSync(tempOutput.tempFile);
+      }
+      if (fs.existsSync(tempOutput.tempDir)) {
+        fs.rmdirSync(tempOutput.tempDir);
+      }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      channel.appendLine(`Failed to clean up eval temp output: ${message}`);
+    }
+  };
+
+  const closeDisposable = workspace.onDidCloseTextDocument((document) => {
+    if (document.uri.fsPath !== uri.fsPath) {
+      return;
+    }
+    channel.appendLine(`Closed result tab, stopping watcher and deleting temp output ${tempFile}`);
+    cleanup();
+    closeDisposable.dispose();
+  });
 
   fs.writeFileSync(tempFile, '"Evaluating..."');
 
   if (workspace.getConfiguration('jsonnet').get('languageServer.continuousEval') === false) {
+    watcher.dispose();
     void evalJsonnet(request, params, yaml, tempFile, true, session);
   } else {
     // Initial eval
     void evalJsonnet(request, params, yaml, tempFile, true, session);
 
     // Watch all jsonnet files, trigger eval on change
-    const watcher = workspace.createFileSystemWatcher('**/*.*sonnet', true, false, true);
     watcher.onDidChange((e) => {
       channel.appendLine(`File changed: ${e.fsPath}, triggering eval`);
       if (session.debounceTimer) {
@@ -209,24 +257,6 @@ async function executeEvalRequest<P>(
       session.debounceTimer = setTimeout(() => {
         void evalJsonnet(request, params, yaml, tempFile, false, session);
       }, 200);
-    });
-
-    // Stop watching when the tab is closed. Only run this once.
-    const disposable = window.onDidChangeVisibleTextEditors((editors) => {
-      for (const editor of editors) {
-        if (editor.document.uri.fsPath === uri.fsPath) {
-          return;
-        }
-      }
-      channel.appendLine(`Closed result tab, stopping watcher and deleting temp file ${tempFile}`);
-      watcher.dispose();
-      if (session.debounceTimer) {
-        clearTimeout(session.debounceTimer);
-      }
-      session.inFlightRequest?.cancel();
-      session.inFlightRequest?.dispose();
-      fs.unlinkSync(tempFile);
-      disposable.dispose();
     });
   }
 }
