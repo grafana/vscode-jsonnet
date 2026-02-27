@@ -31,7 +31,7 @@ import { install } from './install';
 import { JsonnetDebugAdapterDescriptorFactory } from './debugger';
 
 let extensionContext: ExtensionContext;
-let client: LanguageClient;
+let client: LanguageClient | undefined;
 let channel: OutputChannel;
 const evalFileName = 'jsonnet-eval-result';
 
@@ -125,8 +125,7 @@ export async function activate(context: ExtensionContext): Promise<void> {
   context.subscriptions.push(
     workspace.onDidChangeConfiguration(didChangeConfigHandler),
     commands.registerCommand('jsonnet.restartLanguageServer', async function (): Promise<void> {
-      await client.stop();
-      client.outputChannel.dispose();
+      await stopClient();
       await startClient();
       await didChangeConfigHandler();
     }),
@@ -184,6 +183,11 @@ async function executeEvalRequest<P>(
   params: P,
   yaml: boolean
 ): Promise<void> {
+  if (!client) {
+    window.showErrorMessage('Language server is not running');
+    return;
+  }
+
   // Close previous result tab (named jsonnet-eval-result)
   for (const editor of window.visibleTextEditors) {
     if (editor.document.fileName.includes(evalFileName)) {
@@ -274,6 +278,11 @@ async function evalJsonnet<P>(
   display = false,
   session: EvalSession
 ): Promise<void> {
+  const activeClient = client;
+  if (!activeClient) {
+    window.showErrorMessage('Language server is not running');
+    return;
+  }
   const requestId = session.latestRequestId + 1;
   session.latestRequestId = requestId;
   session.inFlightRequest?.cancel();
@@ -284,7 +293,7 @@ async function evalJsonnet<P>(
   channel.appendLine(`Sending ${request.method} request ${requestId}: ${JSON.stringify(params)} for ${tempFile}`);
 
   try {
-    const result: JsonValue = await client.sendRequest(request, params, cancellationSource.token);
+    const result: JsonValue = await activeClient.sendRequest(request, params, cancellationSource.token);
     if (requestId !== session.latestRequestId || cancellationSource.token.isCancellationRequested) {
       return;
     }
@@ -332,10 +341,7 @@ function evalFileUri(editor: TextEditor): string {
 }
 
 export function deactivate(): Thenable<void> | undefined {
-  if (!client) {
-    return undefined;
-  }
-  return client.stop();
+  return stopClient();
 }
 
 async function installDebugger(context: ExtensionContext): Promise<void> {
@@ -347,6 +353,9 @@ async function installDebugger(context: ExtensionContext): Promise<void> {
 }
 
 async function startClient(): Promise<void> {
+  if (client) {
+    return;
+  }
   const configuredLogLevel = workspace.getConfiguration('jsonnet').get<string | null>('languageServer.logLevel', null);
   const args: string[] = [];
   if (configuredLogLevel) {
@@ -383,6 +392,16 @@ async function startClient(): Promise<void> {
 
   // Start the client. This will also launch the server
   client.start();
+}
+
+async function stopClient(): Promise<void> {
+  if (!client) {
+    return;
+  }
+  const activeClient = client;
+  client = undefined;
+  await activeClient.stop();
+  activeClient.outputChannel.dispose();
 }
 
 async function didChangeConfigHandler() {
