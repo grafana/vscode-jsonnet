@@ -504,6 +504,7 @@
     "watch": "tsc -b -w",
     "lint": "eslint ./src --ext .ts,.tsx",
     "test": "npm run compile && node --test test/**/*.test.js",
-    "test:integration": "npm run compile && vscode-test"
+    "test:integration": "npm run compile && vscode-test --label fake",
+    "test:integration:real": "npm run compile && vscode-test --label real"
   }
 }

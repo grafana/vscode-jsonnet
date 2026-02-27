@@ -70,9 +70,13 @@ transitively, then opens a quick pick to jump to one of them.
 
 - `npm test` runs fast unit tests.
 - `npm run test:integration` runs VS Code extension-host integration tests
-  through `@vscode/test-cli`.
+  through `@vscode/test-cli` with the fake LSP.
+- `npm run test:integration:real` runs the same suite against a real LSP
+  binary. Set `JSONNET_LSP_SERVER` to the binary path.
 - Integration scenarios live in `test-scenarios/` and include Jsonnet and
   Tanka-style trees.
+- Integration harness forces `jsonnet.languageServer.enableAutoUpdate=false`
+  and `jsonnet.debugger.enableAutoUpdate=false`.
 
 [Open VSX]: https://open-vsx.org/extension/Grafana/vscode-jsonnet
 [rustanka-lsp documentation]: https://github.com/grafana/rustanka/tree/main/docs/lsp

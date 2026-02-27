@@ -8,7 +8,7 @@ export async function ensureExtensionReady(): Promise<void> {
   if (!ready) {
     ready = (async () => {
       const root = scenarioRoot();
-      const fakeLsp = fakeToolPath(root, 'fake-jrsonnet-lsp');
+      const languageServerPath = resolveLanguageServerPath(root);
       const fakeDebugger = fakeToolPath(root, 'fake-jsonnet-debugger');
 
       const config = vscode.workspace.getConfiguration('jsonnet');
@@ -19,7 +19,7 @@ export async function ensureExtensionReady(): Promise<void> {
       );
       await config.update(
         'languageServer.pathToBinary',
-        fakeLsp,
+        languageServerPath,
         vscode.ConfigurationTarget.Workspace
       );
       await config.update(
@@ -100,6 +100,27 @@ function fakeToolPath(root: string, baseName: string): string {
     ? `${baseName}.cmd`
     : baseName;
   return path.join(root, '.tools', filename);
+}
+
+function resolveLanguageServerPath(root: string): string {
+  const configuredPath = process.env.JSONNET_LSP_SERVER;
+  const realMode = process.env.JSONNET_TEST_REAL_LSP === '1';
+
+  if (realMode && !configuredPath) {
+    throw new Error(
+      'JSONNET_LSP_SERVER must be set when running real integration tests'
+    );
+  }
+
+  if (!configuredPath) {
+    return fakeToolPath(root, 'fake-jrsonnet-lsp');
+  }
+
+  if (path.isAbsolute(configuredPath)) {
+    return configuredPath;
+  }
+
+  return path.resolve(root, configuredPath);
 }
 
 function findExtension(): vscode.Extension<unknown> {
