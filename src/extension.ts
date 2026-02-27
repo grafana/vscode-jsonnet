@@ -168,8 +168,8 @@ function evalCommand(yaml: boolean, promptExpr = false) {
   };
 }
 
-function createTmpFile(yaml: boolean): TempEvalOutput {
-  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'jsonnet-eval'));
+async function createTmpFile(yaml: boolean): Promise<TempEvalOutput> {
+  const tempDir = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'jsonnet-eval'));
   const fileEnding = yaml ? 'yaml' : 'json';
   const tempFile = path.join(tempDir, `${evalFileName}.${fileEnding}`);
   return {
@@ -193,7 +193,7 @@ async function executeEvalRequest<P>(
     }
   }
 
-  const tempOutput = createTmpFile(yaml);
+  const tempOutput = await createTmpFile(yaml);
   const tempFile = tempOutput.tempFile;
   const uri = tempOutput.uri;
   const session: EvalSession = {
@@ -204,7 +204,7 @@ async function executeEvalRequest<P>(
   const watcher = workspace.createFileSystemWatcher('**/*.*sonnet', true, false, true);
   let cleanedUp = false;
 
-  const cleanup = () => {
+  const cleanup = async () => {
     if (cleanedUp) {
       return;
     }
@@ -218,15 +218,20 @@ async function executeEvalRequest<P>(
     session.inFlightRequest?.dispose();
     session.inFlightRequest = undefined;
     try {
-      if (fs.existsSync(tempOutput.tempFile)) {
-        fs.unlinkSync(tempOutput.tempFile);
-      }
-      if (fs.existsSync(tempOutput.tempDir)) {
-        fs.rmdirSync(tempOutput.tempDir);
-      }
+      await fs.promises.unlink(tempOutput.tempFile);
     } catch (err) {
-      const message = err instanceof Error ? err.message : String(err);
-      channel.appendLine(`Failed to clean up eval temp output: ${message}`);
+      if (!(err && typeof err === 'object' && 'code' in err && err.code === 'ENOENT')) {
+        const message = err instanceof Error ? err.message : String(err);
+        channel.appendLine(`Failed to delete eval temp file: ${message}`);
+      }
+    }
+    try {
+      await fs.promises.rmdir(tempOutput.tempDir);
+    } catch (err) {
+      if (!(err && typeof err === 'object' && 'code' in err && err.code === 'ENOENT')) {
+        const message = err instanceof Error ? err.message : String(err);
+        channel.appendLine(`Failed to delete eval temp directory: ${message}`);
+      }
     }
   };
 
@@ -235,11 +240,11 @@ async function executeEvalRequest<P>(
       return;
     }
     channel.appendLine(`Closed result tab, stopping watcher and deleting temp output ${tempFile}`);
-    cleanup();
+    void cleanup();
     closeDisposable.dispose();
   });
 
-  fs.writeFileSync(tempFile, '"Evaluating..."');
+  await fs.promises.writeFile(tempFile, '"Evaluating..."');
 
   if (workspace.getConfiguration('jsonnet').get('languageServer.continuousEval') === false) {
     watcher.dispose();
@@ -285,12 +290,12 @@ async function evalJsonnet<P>(
     }
     let uri = Uri.file(tempFile);
     const serializedResult = JSON.stringify(result, null, 2);
-    fs.writeFileSync(tempFile, serializedResult);
+    await fs.promises.writeFile(tempFile, serializedResult);
 
     if (yaml) {
       const yamlString = stringifyYaml(result);
       uri = Uri.file(tempFile);
-      fs.writeFileSync(tempFile, yamlString);
+      await fs.promises.writeFile(tempFile, yamlString);
     }
     if (display) {
       window.showTextDocument(uri, {
@@ -305,7 +310,7 @@ async function evalJsonnet<P>(
     }
     const message = err instanceof Error ? err.message : String(err);
     window.showErrorMessage(message);
-    fs.writeFileSync(tempFile, message);
+    await fs.promises.writeFile(tempFile, message);
     if (display) {
       const uri = Uri.file(tempFile);
       window.showTextDocument(uri, {

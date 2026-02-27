@@ -1,8 +1,9 @@
 import { ExtensionContext, OutputChannel, window, workspace } from 'vscode';
 import * as https from 'https';
 import * as fs from 'fs';
-import { execFileSync } from 'child_process';
+import { execFile } from 'child_process';
 import * as path from 'path';
+import { promisify } from 'util';
 
 export type Component = 'languageServer' | 'debugger';
 
@@ -23,6 +24,8 @@ const ComponentDetails: Record<
   },
 };
 
+const execFileAsync = promisify(execFile);
+
 export async function install(
   context: ExtensionContext,
   channel: OutputChannel,
@@ -39,7 +42,7 @@ export async function install(
     }
     const binDir = path.dirname(binPath);
     try {
-      fs.mkdirSync(binDir, { recursive: true });
+      await fs.promises.mkdir(binDir, { recursive: true });
     } catch (e) {
       const msg = `Failed to create directory ${binDir}`;
       channel.appendLine(msg);
@@ -51,7 +54,7 @@ export async function install(
 
   const releaseRepository: string = workspace.getConfiguration('jsonnet').get(`${component}.releaseRepository`);
 
-  const binPathExists = fs.existsSync(binPath);
+  const binPathExists = await fileExists(binPath);
   channel.appendLine(`Binary path is ${binPath} (exists: ${binPathExists})`);
 
   // Without auto-update, the process ends here.
@@ -123,8 +126,8 @@ export async function install(
     // The binary exists
     try {
       // Check the version
-      const result = execFileSync(binPath, ['--version']);
-      const currentVersion = parseVersionFromOutput(result.toString(), binaryName);
+      const result = await execFileAsync(binPath, ['--version'], { encoding: 'utf8' });
+      const currentVersion = parseVersionFromOutput(String(result.stdout), binaryName);
       if (!currentVersion) {
         throw new Error('Invalid version string');
       }
@@ -180,7 +183,7 @@ export async function install(
 
     try {
       await download(url, binPath);
-      fs.chmodSync(binPath, 0o777);
+      await fs.promises.chmod(binPath, 0o777);
     } catch (e) {
       const msg = `Failed to download ${url} to ${binPath}`;
       channel.appendLine(msg);
@@ -201,9 +204,7 @@ export async function install(
 function download(uri, filename) {
   return new Promise((resolve, reject) => {
     const onError = function (e) {
-      if (fs.existsSync(filename)) {
-        fs.unlinkSync(filename);
-      }
+      void fs.promises.unlink(filename).catch(() => undefined);
       reject(e);
     };
     https
@@ -221,6 +222,15 @@ function download(uri, filename) {
       })
       .on('error', onError);
   });
+}
+
+async function fileExists(target: string): Promise<boolean> {
+  try {
+    await fs.promises.access(target, fs.constants.F_OK);
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 function parseVersionFromOutput(output: string, binaryName: string): string | null {
