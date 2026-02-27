@@ -75,6 +75,8 @@ transitively, then opens a quick pick to jump to one of them.
   binary. Set `JSONNET_LSP_SERVER` to the binary path.
 - Integration scenarios live in `test-scenarios/` and include Jsonnet and
   Tanka-style trees.
+- Scenario expectations live in `*.expected.json` sidecars. The fake LSP reads
+  those files for eval, diagnostics, and importer responses.
 - Integration harness forces `jsonnet.languageServer.enableAutoUpdate=false`
   and `jsonnet.debugger.enableAutoUpdate=false`.
 

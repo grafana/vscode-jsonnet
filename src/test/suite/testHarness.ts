@@ -1,8 +1,29 @@
 import * as assert from 'assert';
+import * as fs from 'fs';
 import * as path from 'path';
 import * as vscode from 'vscode';
 
 let ready: Promise<void> | undefined;
+
+type ScenarioEvalResult = {
+  result?: unknown;
+  error?: {
+    code?: number;
+    message?: string;
+  };
+};
+
+type ScenarioExpressionExpectations = Record<string, ScenarioEvalResult>;
+
+export type ScenarioExpected = {
+  evalFile?: ScenarioEvalResult;
+  evalExpression?: ScenarioExpressionExpectations;
+  diagnostics?: Array<{
+    severity?: number;
+    message?: string;
+  }>;
+  findTransitiveImporters?: string[];
+};
 
 export async function ensureExtensionReady(): Promise<void> {
   if (!ready) {
@@ -50,6 +71,22 @@ export function scenarioRoot(): string {
   const folder = vscode.workspace.workspaceFolders?.[0];
   assert.ok(folder, 'expected a test workspace folder');
   return folder.uri.fsPath;
+}
+
+export function isRealLspMode(): boolean {
+  return process.env.JSONNET_TEST_REAL_LSP === '1';
+}
+
+export function readScenarioExpected(relativePath: string): ScenarioExpected {
+  const scenarioPath = path.join(scenarioRoot(), relativePath);
+  const expectedPath = `${scenarioPath}.expected.json`;
+
+  if (!fs.existsSync(expectedPath)) {
+    return {};
+  }
+
+  const content = fs.readFileSync(expectedPath, 'utf8');
+  return JSON.parse(content) as ScenarioExpected;
 }
 
 export async function openScenarioDocument(

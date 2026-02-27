@@ -1,0 +1,6 @@
+{
+  "findTransitiveImporters": [
+    "jsonnet/ok.jsonnet",
+    "tanka/environments/default/main.jsonnet"
+  ]
+}

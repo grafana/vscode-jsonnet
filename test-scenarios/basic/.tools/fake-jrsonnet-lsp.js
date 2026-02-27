@@ -1,10 +1,11 @@
 #!/usr/bin/env node
 
+const fs = require('fs');
 const path = require('path');
 const { fileURLToPath, pathToFileURL } = require('url');
 
-const documents = new Map();
 let buffer = Buffer.alloc(0);
+const expectedCache = new Map();
 
 process.stdin.on('data', (chunk) => {
   buffer = Buffer.concat([buffer, chunk]);
@@ -55,6 +56,7 @@ function parseContentLength(header) {
       return Number(match[1]);
     }
   }
+
   return undefined;
 }
 
@@ -114,73 +116,85 @@ function handleRequest(message) {
   }
 
   if (method === 'jrsonnet/evalFile') {
-    const uri = message.params?.textDocument?.uri;
-    const relative = scenarioRelativePath(uri);
-
-    if (relative === 'jsonnet/invalid_type.jsonnet') {
-      sendError(id, -32001, 'RuntimeError: type mismatch in invalid_type.jsonnet');
-      return;
-    }
-
-    if (relative === 'tanka/environments/default/main.jsonnet') {
-      sendResult(id, {
-        source: relative,
-        kind: 'tanka',
-        environment: 'default',
-      });
-      return;
-    }
-
-    sendResult(id, {
-      source: relative,
-      value: {
-        greeting: 'hello',
-        target: 'world',
-      },
-    });
+    handleEvalFileRequest(id, message.params?.textDocument?.uri);
     return;
   }
 
   if (method === 'jrsonnet/evalExpression') {
-    const expression = message.params?.expression;
-    if (expression === 'error') {
-      sendError(id, -32001, 'RuntimeError: expression failure');
-      return;
-    }
-
-    if (expression === '1 + 1' || expression === '1+1') {
-      sendResult(id, 2);
-      return;
-    }
-
-    sendResult(id, {
-      expression,
-      base: scenarioRelativePath(message.params?.baseDocument?.uri),
-    });
+    handleEvalExpressionRequest(
+      id,
+      message.params?.expression,
+      message.params?.baseDocument?.uri
+    );
     return;
   }
 
   if (method === 'jrsonnet/findTransitiveImporters') {
-    const uri = message.params?.textDocument?.uri;
-    const fsPath = toFsPath(uri);
-    const root = findScenarioRoot(fsPath);
-
-    let importers = [];
-    if (root && scenarioRelativePath(uri) === 'jsonnet/lib/imported.libsonnet') {
-      importers = [
-        pathToFileURL(path.join(root, 'jsonnet/ok.jsonnet')).toString(),
-        pathToFileURL(path.join(root, 'tanka/environments/default/main.jsonnet')).toString(),
-      ];
-    }
-
-    sendResult(id, {
-      file: uri,
-      transitiveImporters: importers,
-    });
+    handleFindImportersRequest(id, message.params?.textDocument?.uri);
     return;
   }
 
   sendResult(id, null);
+}
+
+function handleEvalFileRequest(id, uri) {
+  const expected = loadExpectedFromUri(uri);
+  const evalFile = expected.evalFile;
+
+  if (evalFile?.error?.message) {
+    sendError(id, evalFile.error.code ?? -32001, evalFile.error.message);
+    return;
+  }
+
+  if (evalFile && Object.prototype.hasOwnProperty.call(evalFile, 'result')) {
+    sendResult(id, evalFile.result);
+    return;
+  }
+
+  sendResult(id, null);
+}
+
+function handleEvalExpressionRequest(id, expression, baseDocumentUri) {
+  const expected = loadExpectedFromUri(baseDocumentUri);
+  const evalExpression = expected.evalExpression || {};
+  const entry = evalExpression[String(expression)] || undefined;
+
+  if (entry?.error?.message) {
+    sendError(id, entry.error.code ?? -32001, entry.error.message);
+    return;
+  }
+
+  if (entry && Object.prototype.hasOwnProperty.call(entry, 'result')) {
+    sendResult(id, entry.result);
+    return;
+  }
+
+  if (expression === 'error') {
+    sendError(id, -32001, 'RuntimeError: expression failure');
+    return;
+  }
+
+  if (expression === '1 + 1' || expression === '1+1') {
+    sendResult(id, 2);
+    return;
+  }
+
+  sendResult(id, {
+    expression,
+    base: scenarioRelativePath(baseDocumentUri),
+  });
+}
+
+function handleFindImportersRequest(id, uri) {
+  const fsPath = toFsPath(uri);
+  const root = findScenarioRoot(fsPath);
+  const expected = loadExpectedFromUri(uri);
+  const importers = resolveImporterUris(root, expected.findTransitiveImporters);
+
+  sendResult(id, {
+    file: uri,
+    transitiveImporters: importers,
+  });
 }
 
 function handleNotification(method, params) {
@@ -190,78 +204,99 @@ function handleNotification(method, params) {
   }
 
   if (method === 'textDocument/didOpen') {
-    const uri = params?.textDocument?.uri;
-    const text = params?.textDocument?.text;
-    documents.set(uri, text);
-    publishDiagnostics(uri);
+    publishDiagnostics(params?.textDocument?.uri);
     return;
   }
 
   if (method === 'textDocument/didChange') {
-    const uri = params?.textDocument?.uri;
-    const changes = params?.contentChanges;
-    if (Array.isArray(changes) && changes.length > 0) {
-      documents.set(uri, changes[changes.length - 1].text);
-    }
-    publishDiagnostics(uri);
+    publishDiagnostics(params?.textDocument?.uri);
     return;
   }
 
   if (method === 'textDocument/didClose') {
-    const uri = params?.textDocument?.uri;
-    documents.delete(uri);
     sendNotification('textDocument/publishDiagnostics', {
-      uri,
+      uri: params?.textDocument?.uri,
       diagnostics: [],
     });
   }
 }
 
 function publishDiagnostics(uri) {
-  const diagnostics = diagnosticsForUri(uri);
+  const expected = loadExpectedFromUri(uri);
+  const diagnostics = Array.isArray(expected.diagnostics)
+    ? expected.diagnostics
+    : [];
+
   sendNotification('textDocument/publishDiagnostics', {
     uri,
     diagnostics,
   });
 }
 
-function diagnosticsForUri(uri) {
-  const relative = scenarioRelativePath(uri);
-  if (relative === 'jsonnet/invalid_type.jsonnet') {
-    return [
-      {
-        range: {
-          start: { line: 1, character: 9 },
-          end: { line: 1, character: 10 },
-        },
-        severity: 1,
-        source: 'fake-jrsonnet-lsp',
-        message: 'Type mismatch: object + string',
-      },
-    ];
+function resolveImporterUris(root, importers) {
+  if (!root || !Array.isArray(importers)) {
+    return [];
   }
 
-  if (relative === 'jsonnet/deprecated_field.jsonnet') {
-    return [
-      {
-        range: {
-          start: { line: 1, character: 2 },
-          end: { line: 1, character: 17 },
-        },
-        severity: 2,
-        source: 'fake-jrsonnet-lsp',
-        message: 'Deprecated field used: deprecatedField',
-      },
-    ];
+  const uris = [];
+
+  for (const importer of importers) {
+    if (typeof importer !== 'string' || importer.length === 0) {
+      continue;
+    }
+
+    if (importer.startsWith('file://')) {
+      uris.push(importer);
+      continue;
+    }
+
+    const absolutePath = path.isAbsolute(importer)
+      ? importer
+      : path.join(root, importer);
+    uris.push(pathToFileURL(absolutePath).toString());
   }
 
-  return [];
+  return uris;
+}
+
+function loadExpectedFromUri(uri) {
+  const expectedPath = expectedPathForUri(uri);
+  if (!expectedPath) {
+    return {};
+  }
+
+  if (expectedCache.has(expectedPath)) {
+    return expectedCache.get(expectedPath);
+  }
+
+  let value = {};
+
+  try {
+    if (fs.existsSync(expectedPath)) {
+      value = JSON.parse(fs.readFileSync(expectedPath, 'utf8'));
+    }
+  } catch {
+    value = {};
+  }
+
+  expectedCache.set(expectedPath, value);
+  return value;
+}
+
+function expectedPathForUri(uri) {
+  const fsPath = toFsPath(uri);
+  if (!fsPath) {
+    return undefined;
+  }
+
+  return `${fsPath}.expected.json`;
 }
 
 function toFsPath(uri) {
   if (typeof uri !== 'string') {
     return '';
   }
+
   try {
     return fileURLToPath(uri);
   } catch {
@@ -278,6 +313,7 @@ function scenarioRelativePath(uri) {
   const normalized = path.normalize(fsPath);
   const parts = normalized.split(path.sep);
   const scenariosIndex = parts.lastIndexOf('test-scenarios');
+
   if (scenariosIndex === -1 || scenariosIndex + 2 >= parts.length) {
     return path.basename(normalized);
   }
@@ -291,6 +327,7 @@ function findScenarioRoot(fsPath) {
   }
 
   let current = path.resolve(fsPath);
+
   while (current !== path.dirname(current)) {
     if (
       path.basename(current) === 'basic' &&
@@ -298,6 +335,7 @@ function findScenarioRoot(fsPath) {
     ) {
       return current;
     }
+
     current = path.dirname(current);
   }
 

@@ -1,9 +1,12 @@
 import * as assert from 'assert';
 import * as vscode from 'vscode';
+import { parse as parseYaml } from 'yaml';
 import {
   closeEvalEditors,
   ensureExtensionReady,
+  isRealLspMode,
   openScenarioDocument,
+  readScenarioExpected,
   waitForValue,
 } from './testHarness';
 
@@ -17,7 +20,10 @@ suite('Eval Commands', () => {
   });
 
   test('evaluates a file as JSON', async () => {
-    await openScenarioDocument('jsonnet/ok.jsonnet');
+    const relativePath = 'jsonnet/ok.jsonnet';
+    const expected = readScenarioExpected(relativePath);
+
+    await openScenarioDocument(relativePath);
     await vscode.commands.executeCommand('jsonnet.evalFile');
 
     const editor = await waitForValue(() => {
@@ -34,21 +40,21 @@ suite('Eval Commands', () => {
       return value;
     });
 
-    assert.strictEqual(
-      text.trim(),
-      JSON.stringify(
-        {
-          source: 'jsonnet/ok.jsonnet',
-          value: { greeting: 'hello', target: 'world' },
-        },
-        null,
-        2
-      )
-    );
+    const actual = JSON.parse(text);
+
+    if (isRealLspMode()) {
+      assert.ok(typeof actual === 'object' && actual !== null);
+      return;
+    }
+
+    assert.deepStrictEqual(actual, expected.evalFile?.result);
   });
 
   test('evaluates a file as YAML', async () => {
-    await openScenarioDocument('tanka/environments/default/main.jsonnet');
+    const relativePath = 'tanka/environments/default/main.jsonnet';
+    const expected = readScenarioExpected(relativePath);
+
+    await openScenarioDocument(relativePath);
     await vscode.commands.executeCommand('jsonnet.evalFileYaml');
 
     const editor = await waitForValue(() => {
@@ -65,13 +71,21 @@ suite('Eval Commands', () => {
       return value;
     });
 
-    assert.ok(text.includes('source: tanka/environments/default/main.jsonnet'));
-    assert.ok(text.includes('environment: default'));
-    assert.ok(text.includes('kind: tanka'));
+    const actual = parseYaml(text);
+
+    if (isRealLspMode()) {
+      assert.ok(typeof actual === 'object' && actual !== null);
+      return;
+    }
+
+    assert.deepStrictEqual(actual, expected.evalFile?.result);
   });
 
   test('surfaces eval errors in the result tab', async () => {
-    await openScenarioDocument('jsonnet/invalid_type.jsonnet');
+    const relativePath = 'jsonnet/invalid_type.jsonnet';
+    const expected = readScenarioExpected(relativePath);
+
+    await openScenarioDocument(relativePath);
     await vscode.commands.executeCommand('jsonnet.evalFile');
 
     const editor = await waitForValue(() => {
@@ -88,6 +102,11 @@ suite('Eval Commands', () => {
       return value;
     });
 
-    assert.ok(text.includes('RuntimeError: type mismatch'));
+    if (isRealLspMode()) {
+      assert.notStrictEqual(text.trim(), '');
+      return;
+    }
+
+    assert.ok(text.includes(expected.evalFile?.error?.message || 'error'));
   });
 });

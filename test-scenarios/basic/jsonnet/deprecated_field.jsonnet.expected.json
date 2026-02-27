@@ -1,0 +1,19 @@
+{
+  "diagnostics": [
+    {
+      "range": {
+        "start": {
+          "line": 1,
+          "character": 2
+        },
+        "end": {
+          "line": 1,
+          "character": 17
+        }
+      },
+      "severity": 2,
+      "source": "fake-jrsonnet-lsp",
+      "message": "Deprecated field used: deprecatedField"
+    }
+  ]
+}
