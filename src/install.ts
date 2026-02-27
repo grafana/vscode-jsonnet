@@ -14,7 +14,7 @@ const ComponentDetails: Record<
   }
 > = {
   languageServer: {
-    binaryName: 'jsonnet-language-server',
+    binaryName: 'jrsonnet-lsp',
     displayName: 'language server',
   },
   debugger: {
@@ -58,7 +58,7 @@ export async function install(
   const enableAutoUpdate: boolean = workspace.getConfiguration('jsonnet').get(`${component}.enableAutoUpdate`);
   if (!enableAutoUpdate) {
     if (!binPathExists) {
-      const msg = `The jsonnet ${displayName} binary does not exist, please set either 'jsonnet.${component}.pathToBinary' or 'jsonnet.${component}.enableAutoUpdate'`;
+      const msg = `The ${displayName} binary does not exist, please set either 'jsonnet.${component}.pathToBinary' or 'jsonnet.${component}.enableAutoUpdate'`;
       channel.appendLine(msg);
       window.showErrorMessage(msg);
       return null;
@@ -70,14 +70,17 @@ export async function install(
   const releaseUrl = `https://api.github.com/repos/${releaseRepository}/releases/latest`;
   channel.appendLine(`Auto-update is enabled. Fetching latest release from ${releaseUrl}`);
 
-  let releaseData: { name?: string } = {};
+  let releaseData: { name?: string; tag_name?: string; assets?: { name?: string; browser_download_url?: string }[] } = {};
   let latestVersion = '';
   try {
     const body = await githubApiRequest(releaseUrl);
     releaseData = JSON.parse(body);
-    latestVersion = releaseData.name;
+    latestVersion = releaseData.tag_name || releaseData.name || '';
     if (latestVersion.startsWith('v')) {
       latestVersion = latestVersion.substring(1);
+    }
+    if (!latestVersion) {
+      throw new Error('Could not determine release version from GitHub API response');
     }
   } catch (e) {
     // If we already have a binary on disk, prefer continuing with it rather than failing activation.
@@ -108,7 +111,7 @@ export async function install(
   if (!binPathExists) {
     // The binary does not exist. Only install if the user says yes.
     const value = await window.showInformationMessage(
-      `The jsonnet ${displayName} does not seem to be installed. Do you wish to install the latest version?`,
+      `The ${displayName} does not seem to be installed. Do you wish to install the latest version?`,
       'Yes',
       'No'
     );
@@ -120,12 +123,9 @@ export async function install(
     // The binary exists
     try {
       // Check the version
-      let currentVersion = '';
       const result = execFileSync(binPath, ['--version']);
-      const prefix = `${binaryName} version `;
-      if (result.toString().startsWith(prefix)) {
-        currentVersion = result.toString().substring(prefix.length).trim();
-      } else {
+      const currentVersion = parseVersionFromOutput(result.toString(), binaryName);
+      if (!currentVersion) {
         throw new Error('Invalid version string');
       }
 
@@ -160,13 +160,22 @@ export async function install(
       arm64: 'arm64',
       x64: 'amd64',
     }[process.arch];
+    if (!arch) {
+      const msg = `Unsupported architecture '${process.arch}'`;
+      channel.appendLine(msg);
+      window.showErrorMessage(msg);
+      throw new Error(msg);
+    }
     let suffix = '';
     if (platform === 'win32') {
       platform = 'windows';
       suffix = '.exe';
     }
 
-    const url = `https://github.com/${releaseRepository}/releases/download/v${latestVersion}/${binaryName}_${latestVersion}_${platform}_${arch}${suffix}`;
+    const matchingAssetUrl = findMatchingReleaseAssetUrl(releaseData.assets ?? [], binaryName, platform, arch);
+    const url =
+      matchingAssetUrl ||
+      `https://github.com/${releaseRepository}/releases/download/v${latestVersion}/${binaryName}_${latestVersion}_${platform}_${arch}${suffix}`;
     channel.appendLine(`Downloading ${url}`);
 
     try {
@@ -192,7 +201,9 @@ export async function install(
 function download(uri, filename) {
   return new Promise((resolve, reject) => {
     const onError = function (e) {
-      fs.unlinkSync(filename);
+      if (fs.existsSync(filename)) {
+        fs.unlinkSync(filename);
+      }
       reject(e);
     };
     https
@@ -210,6 +221,70 @@ function download(uri, filename) {
       })
       .on('error', onError);
   });
+}
+
+function parseVersionFromOutput(output: string, binaryName: string): string | null {
+  const firstLine = output.trim().split(/\r?\n/)[0];
+  if (!firstLine) {
+    return null;
+  }
+
+  const escapedBinaryName = binaryName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const prefixedMatch = firstLine.match(new RegExp(`^${escapedBinaryName}(?:\\s+version)?\\s+(.+)$`, 'i'));
+  if (prefixedMatch && prefixedMatch[1]) {
+    return prefixedMatch[1].trim();
+  }
+
+  const plainVersionMatch = firstLine.match(/^v?\d+\.\d+\.\d+(?:[-+].+)?$/);
+  if (plainVersionMatch) {
+    return firstLine.trim().replace(/^v/, '');
+  }
+
+  return null;
+}
+
+function findMatchingReleaseAssetUrl(
+  assets: { name?: string; browser_download_url?: string }[],
+  binaryName: string,
+  platform: string,
+  arch: string
+): string | null {
+  const platformAliases: Record<string, string[]> = {
+    linux: ['linux'],
+    darwin: ['darwin', 'macos', 'osx'],
+    windows: ['windows', 'win32', 'win'],
+  };
+  const archAliases: Record<string, string[]> = {
+    amd64: ['amd64', 'x86_64'],
+    arm64: ['arm64', 'aarch64'],
+    armv7: ['armv7', 'armv7l', 'arm'],
+  };
+
+  const platformTokens = platformAliases[platform] ?? [platform];
+  const archTokens = archAliases[arch] ?? [arch];
+  const binaryToken = binaryName.toLowerCase();
+
+  const candidates = assets
+    .filter((asset) => asset.name && asset.browser_download_url)
+    .filter((asset) => {
+      const name = asset.name.toLowerCase();
+      if (name.endsWith('.sha256') || name.endsWith('.sig') || name.endsWith('.asc') || name.endsWith('.txt')) {
+        return false;
+      }
+      if (!name.includes(binaryToken)) {
+        return false;
+      }
+      const matchesPlatform = platformTokens.some((token) => name.includes(token));
+      const matchesArch = archTokens.some((token) => name.includes(token));
+      return matchesPlatform && matchesArch;
+    });
+
+  if (candidates.length === 0) {
+    return null;
+  }
+
+  candidates.sort((a, b) => a.name.length - b.name.length);
+  return candidates[0].browser_download_url;
 }
 
 function githubApiRequest(url: string, options: https.RequestOptions = {}, encoding = 'utf8'): Promise<string> {
