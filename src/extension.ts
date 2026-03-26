@@ -141,7 +141,11 @@ function evalCommand(yaml: boolean, promptExpr = false) {
       const watcher = workspace.createFileSystemWatcher("**/*.*sonnet", true, false, true);
       watcher.onDidChange((e) => {
         channel.appendLine(`File changed: ${e.fsPath}, triggering eval`);
-        evalJsonnet(params, yaml, tempFile, false);
+        var newParams: ExecuteCommandParams = {
+          command: expr === '' ? `jsonnet.evalFile` : `jsonnet.evalExpression`,
+          arguments: [e.fsPath].concat(expr === '' ? [] : [expr]),
+        };
+        evalJsonnet(newParams, yaml, tempFile, false);
       });
 
       // Stop watching when the tab is closed. Only run this once.
