@@ -191,7 +191,9 @@ function evalJsonnet(params: ExecuteCommandParams, yaml: boolean, tempFile: stri
       }
     })
     .catch((err) => {
-      window.showErrorMessage(err.message);
+      if (workspace.getConfiguration('jsonnet').get('languageServer.showPopupOnError') === true) {
+        window.showErrorMessage(err.message);
+      };
       fs.writeFileSync(tempFile, err.message);
       if (display) {
         const uri = Uri.file(tempFile);
