@@ -318,7 +318,7 @@
 	},
 	"dependencies": {
 		"@types/vscode": "^1.69.0",
-		"vscode-languageclient": "^8.0.0",
+		"vscode-languageclient": "^10.0.0",
 		"yaml": "^1.10.2"
 	},
 	"devDependencies": {
