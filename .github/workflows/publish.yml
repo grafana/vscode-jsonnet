@@ -30,7 +30,7 @@ jobs:
           persist-credentials: false
       - run: npm install
       - id: get-secrets
-        uses: grafana/shared-workflows/actions/get-vault-secrets@a37de51f3d713a30a9e4b21bcdfbd38170020593 # get-vault-secrets/v1.3.0
+        uses: grafana/shared-workflows/actions/get-vault-secrets@2f1ddaf3ce1aa677356243d0dd584be33cfa35e3 # get-vault-secrets/v2.1
         with:
           # Secrets placed in the ci/repo/grafana/<repo>/<path> path in Vault
           repo_secrets: |
